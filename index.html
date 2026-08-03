@@ -111,8 +111,31 @@
   <textarea id="meta-nota-generale" placeholder="Osservazioni generali valide per l'intero reparto..."></textarea>
 </details>
 
+<details class="extra" open>
+  <summary>☁️ Dropbox</summary>
+  <div id="dbx-status" style="font-size:12px;color:#0263AC;font-weight:bold;margin:4px 0 8px;">⚪ Non collegato</div>
+  <label>App Key Dropbox (developers.dropbox.com)</label>
+  <input id="dbx-app-key" placeholder="Incolla qui la App Key" onchange="dbxSet('dbx_app_key', this.value.trim())">
+  <label>Cartella su Dropbox</label>
+  <input id="dbx-folder" value="/Ispezioni-App" onchange="dbxSet('dbx_folder', this.value.trim())">
+  <label>Nome file elenco macchine (dentro quella cartella)</label>
+  <input id="dbx-registry-name" value="elenco-macchine.xlsx" onchange="dbxSet('dbx_registry_name', this.value.trim())">
+  <div class="draft-bar" style="margin:8px 0;">
+    <button class="draft-btn save" id="dbx-connect-btn" onclick="connectDropbox()">🔗 Collega Dropbox</button>
+    <button class="draft-btn file" onclick="disconnectDropbox()">🔌 Scollega</button>
+  </div>
+  <div class="draft-bar" style="margin:0 0 8px;">
+    <button class="draft-btn file" onclick="saveDraftToDropbox()">☁️ Salva bozza</button>
+    <button class="draft-btn file" onclick="loadDraftFromDropbox()">☁️ Riprendi bozza</button>
+  </div>
+  <div class="draft-bar" style="margin:0;">
+    <button class="draft-btn file" onclick="importRegistryFromDropbox()">☁️ Importa elenco macchine</button>
+  </div>
+  <div style="font-size:11px; color:#667; margin-top:8px;">Una volta collegato, bozza ed elenco macchine si leggono/scrivono direttamente sul tuo Dropbox, nella cartella indicata sopra. Il report finale si salva su Dropbox se spunti l'opzione qui sotto, vicino al pulsante Esporta.</div>
+</details>
+
 <details class="extra">
-  <summary>Elenco macchine e liste suggerite</summary>
+  <summary>Elenco macchine (import manuale da file) e liste suggerite</summary>
   <div class="draft-bar" style="margin:8px 0 0;">
     <button class="draft-btn file" onclick="triggerMachineRegistryImport()">📥 Importa elenco macchine (XLS)</button>
     <input type="file" id="registry-file-input" accept=".xlsx,.xls" onchange="handleMachineRegistryFile(event)">
@@ -123,12 +146,12 @@
     <button class="draft-btn file" onclick="triggerLoadListsFile()">⬆️ Carica liste da file</button>
     <input type="file" id="lists-file-input" accept=".json" onchange="handleLoadListsFile(event)">
   </div>
-  <div style="font-size:11px; color:#667; margin-top:6px;">Le liste (Reparti/Macchine/Codici imparati + elenco macchine importato) restano collegate a questa app finché resti dentro Claude. Se apri il file HTML da Dropbox in locale, usa questi due pulsanti per portarle con te.</div>
+  <div style="font-size:11px; color:#667; margin-top:6px;">Alternativa manuale ai pulsanti Dropbox qui sopra — utile se in un momento specifico non sei collegato.</div>
 </details>
 
 <div class="draft-bar">
-  <button class="draft-btn save" onclick="saveDraft()">💾 Salva bozza</button>
-  <button class="draft-btn load" onclick="loadDraft(false)">📂 Riprendi bozza</button>
+  <button class="draft-btn save" onclick="saveDraft()">💾 Salva bozza (dentro Claude)</button>
+  <button class="draft-btn load" onclick="loadDraft(false)">📂 Riprendi bozza (dentro Claude)</button>
 </div>
 <div class="draft-bar">
   <button class="draft-btn file" onclick="downloadDraftFile()">⬇️ Bozza su file</button>
@@ -138,7 +161,7 @@
 <div id="draft-status" class="draft-status"></div>
 
 <div class="warn">
-  ⚠️ Prototipo dimostrativo: senza salvare la bozza, i dati restano solo in questa pagina e si perdono se ricarichi o chiudi.
+  ⚠️ Senza collegare Dropbox o salvare una bozza, i dati restano solo in questa pagina e si perdono se ricarichi o chiudi.
 </div>
 
 <main id="machines-container">
@@ -154,6 +177,9 @@
     <option value="docx">DOCX — per modificare l'impaginazione</option>
     <option value="pdf">PDF — per il report concluso</option>
   </select>
+  <label style="font-size:12px; display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+    <input type="checkbox" id="dbx-export-toggle" checked style="width:auto;"> Salva direttamente su Dropbox invece di scaricare (XLSX/DOCX)
+  </label>
   <button class="export-btn" onclick="exportReport()">📤 Esporta report</button>
 </div>
 
@@ -872,10 +898,230 @@ async function exportExcel() {
   zip.folder('_rels').file('.rels', rootRelsXml);
 
   const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  await finalizeExport(blob, 'Report_Ispezione_' + buildBaseFilename() + '.xlsx');
+}
+
+// ===== Integrazione Dropbox (OAuth 2.0 PKCE, client-side) =====
+// Nota: questa pagina è pensata per girare fuori da Claude (es. GitHub Pages),
+// quindi qui usiamo localStorage per tenere collegato Dropbox tra una visita e l'altra.
+
+function dbxGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+function dbxSet(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
+function dbxDel(key) { try { localStorage.removeItem(key); } catch (e) {} }
+
+function base64UrlEncode(bytes) {
+  let str = '';
+  const arr = new Uint8Array(bytes);
+  for (let i = 0; i < arr.length; i++) str += String.fromCharCode(arr[i]);
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+async function sha256Bytes(text) {
+  const enc = new TextEncoder().encode(text);
+  return await crypto.subtle.digest('SHA-256', enc);
+}
+function randomVerifier() {
+  const arr = new Uint8Array(64);
+  crypto.getRandomValues(arr);
+  return base64UrlEncode(arr.buffer);
+}
+function dbxRedirectUri() {
+  return window.location.origin + window.location.pathname;
+}
+
+async function connectDropbox() {
+  const appKey = document.getElementById('dbx-app-key').value.trim();
+  if (!appKey) { alert('Inserisci prima la App Key di Dropbox (developers.dropbox.com).'); return; }
+  dbxSet('dbx_app_key', appKey);
+  const verifier = randomVerifier();
+  dbxSet('dbx_pkce_verifier', verifier);
+  const challenge = base64UrlEncode(await sha256Bytes(verifier));
+  const authUrl = 'https://www.dropbox.com/oauth2/authorize' +
+    '?client_id=' + encodeURIComponent(appKey) +
+    '&redirect_uri=' + encodeURIComponent(dbxRedirectUri()) +
+    '&response_type=code&token_access_type=offline' +
+    '&code_challenge=' + challenge + '&code_challenge_method=S256';
+  window.location.href = authUrl;
+}
+
+function disconnectDropbox() {
+  dbxDel('dbx_access_token');
+  dbxDel('dbx_refresh_token');
+  dbxDel('dbx_expires_at');
+  updateDropboxStatusUI();
+  showDraftStatus('Disconnesso da Dropbox.');
+}
+
+async function handleDropboxRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if (!code) return;
+  const appKey = dbxGet('dbx_app_key');
+  const verifier = dbxGet('dbx_pkce_verifier');
+  if (!appKey || !verifier) return;
+  try {
+    const resp = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code, grant_type: 'authorization_code', client_id: appKey,
+        redirect_uri: dbxRedirectUri(), code_verifier: verifier,
+      }),
+    });
+    const data = await resp.json();
+    if (data.access_token) {
+      dbxSet('dbx_access_token', data.access_token);
+      if (data.refresh_token) dbxSet('dbx_refresh_token', data.refresh_token);
+      dbxSet('dbx_expires_at', String(Date.now() + (data.expires_in || 14400) * 1000));
+      showDraftStatus('✅ Dropbox collegato.');
+    } else {
+      showDraftStatus('⚠️ Collegamento Dropbox non riuscito.');
+    }
+  } catch (e) {
+    showDraftStatus('⚠️ Collegamento Dropbox non riuscito.');
+  }
+  window.history.replaceState({}, document.title, dbxRedirectUri());
+  updateDropboxStatusUI();
+}
+
+async function ensureDropboxToken() {
+  const expiresAt = parseInt(dbxGet('dbx_expires_at') || '0', 10);
+  const current = dbxGet('dbx_access_token');
+  if (current && Date.now() < expiresAt - 60000) return current;
+  const refresh = dbxGet('dbx_refresh_token');
+  const appKey = dbxGet('dbx_app_key');
+  if (!refresh || !appKey) return null;
+  try {
+    const resp = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refresh, client_id: appKey }),
+    });
+    const data = await resp.json();
+    if (data.access_token) {
+      dbxSet('dbx_access_token', data.access_token);
+      dbxSet('dbx_expires_at', String(Date.now() + (data.expires_in || 14400) * 1000));
+      return data.access_token;
+    }
+  } catch (e) { /* rete assente o token revocato */ }
+  return null;
+}
+
+function isDropboxConnected() {
+  return !!dbxGet('dbx_refresh_token');
+}
+
+function updateDropboxStatusUI() {
+  const el = document.getElementById('dbx-status');
+  const connectBtn = document.getElementById('dbx-connect-btn');
+  if (!el) return;
+  const connected = isDropboxConnected();
+  el.textContent = connected ? '✅ Collegato a Dropbox' : '⚪ Non collegato';
+  if (connectBtn) connectBtn.textContent = connected ? '🔗 Ricollega Dropbox' : '🔗 Collega Dropbox';
+}
+
+function dbxFolder() {
+  const el = document.getElementById('dbx-folder');
+  const v = (el && el.value.trim()) || '/Ispezioni-App';
+  return v.replace(/\/+$/, '');
+}
+
+async function dropboxUpload(path, blobOrString) {
+  const token = await ensureDropboxToken();
+  if (!token) { showDraftStatus('⚠️ Collega prima Dropbox.'); return false; }
+  const body = typeof blobOrString === 'string' ? new Blob([blobOrString]) : blobOrString;
+  try {
+    const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Dropbox-API-Arg': JSON.stringify({ path, mode: 'overwrite', mute: true }),
+        'Content-Type': 'application/octet-stream',
+      },
+      body,
+    });
+    return resp.ok;
+  } catch (e) { return false; }
+}
+
+async function dropboxDownload(path) {
+  const token = await ensureDropboxToken();
+  if (!token) { showDraftStatus('⚠️ Collega prima Dropbox.'); return null; }
+  try {
+    const resp = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Dropbox-API-Arg': JSON.stringify({ path }),
+      },
+    });
+    if (!resp.ok) return null;
+    return resp;
+  } catch (e) { return null; }
+}
+
+async function saveDraftToDropbox() {
+  const payload = JSON.stringify({ meta: collectMeta(), macchine, macchinaCounter });
+  const ok = await dropboxUpload(dbxFolder() + '/bozza-corrente.json', payload);
+  showDraftStatus(ok ? '☁️ Bozza salvata su Dropbox.' : '⚠️ Salvataggio su Dropbox non riuscito.');
+}
+
+async function loadDraftFromDropbox() {
+  const resp = await dropboxDownload(dbxFolder() + '/bozza-corrente.json');
+  if (!resp) { showDraftStatus('Nessuna bozza trovata su Dropbox.'); return; }
+  try {
+    const data = JSON.parse(await resp.text());
+    applyMeta(data.meta);
+    macchine = data.macchine || [];
+    macchinaCounter = data.macchinaCounter || macchine.length;
+    render();
+    showDraftStatus('☁️ Bozza caricata da Dropbox.');
+  } catch (e) {
+    showDraftStatus('⚠️ Bozza su Dropbox non leggibile.');
+  }
+}
+
+async function importRegistryFromDropbox() {
+  if (typeof XLSX === 'undefined') { alert('Libreria di lettura XLS non caricata.'); return; }
+  const filename = (document.getElementById('dbx-registry-name').value || 'elenco-macchine.xlsx').trim();
+  const resp = await dropboxDownload(dbxFolder() + '/' + filename);
+  if (!resp) { showDraftStatus('File elenco macchine non trovato su Dropbox (' + filename + ').'); return; }
+  try {
+    const buf = await resp.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    if (!rows.length) throw new Error('vuoto');
+    const header = rows[0].map(h => String(h).toLowerCase().trim());
+    const idxCodice = header.findIndex(h => h.includes('codice'));
+    const idxMacchina = header.findIndex(h => h.includes('macchina') || h.includes('nome'));
+    const idxReparto = header.findIndex(h => h.includes('reparto') || h.includes('zona'));
+    const dataRows = rows.slice(1);
+    const imported = dataRows.map(r => ({
+      codice: String((idxCodice >= 0 ? r[idxCodice] : r[0]) || '').trim(),
+      macchina: String((idxMacchina >= 0 ? r[idxMacchina] : r[1]) || '').trim(),
+      reparto: String((idxReparto >= 0 ? r[idxReparto] : r[2]) || '').trim(),
+    })).filter(r => r.codice);
+    if (!imported.length) throw new Error('nessuna riga valida');
+    machineRegistry = imported;
+    renderDatalists();
+    saveAnagrafiche();
+    showDraftStatus('📥 Elenco macchine importato da Dropbox: ' + imported.length + ' codici.');
+  } catch (err) {
+    showDraftStatus('⚠️ File XLS su Dropbox non leggibile.');
+  }
+}
+
+async function finalizeExport(blob, filename) {
+  const toggle = document.getElementById('dbx-export-toggle');
+  if (toggle && toggle.checked) {
+    const ok = await dropboxUpload(dbxFolder() + '/Report/' + filename, blob);
+    if (ok) { showDraftStatus('☁️ Report salvato su Dropbox: ' + filename); return; }
+    showDraftStatus('⚠️ Salvataggio su Dropbox non riuscito — scarico in locale.');
+  }
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'Report_Ispezione_' + buildBaseFilename() + '.xlsx';
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -1180,19 +1426,24 @@ async function exportDocx() {
   mediaFiles.forEach(m => mediaFolder.file(m.name, base64ToUint8Array(m.base64), { binary: true }));
 
   const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'Report_Ispezione_' + buildBaseFilename() + '.docx';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  await finalizeExport(blob, 'Report_Ispezione_' + buildBaseFilename() + '.docx');
+}
+
+function initDropboxFields() {
+  const appKeyEl = document.getElementById('dbx-app-key');
+  const folderEl = document.getElementById('dbx-folder');
+  const regEl = document.getElementById('dbx-registry-name');
+  if (appKeyEl) appKeyEl.value = dbxGet('dbx_app_key') || '';
+  if (folderEl && dbxGet('dbx_folder')) folderEl.value = dbxGet('dbx_folder');
+  if (regEl && dbxGet('dbx_registry_name')) regEl.value = dbxGet('dbx_registry_name');
+  updateDropboxStatusUI();
 }
 
 render();
 loadDraft(false);
 loadAnagrafiche();
+initDropboxFields();
+handleDropboxRedirect();
 </script>
 <div id="print-area"></div>
 <datalist id="list-reparti"></datalist>
