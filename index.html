@@ -7,7 +7,7 @@
 <style>
   :root { --blue-dark:#0263AC; --blue-med:#2E75B6; --grey:#f2f4f7; --border:#dde3ea; --yellow:#fff3b0; }
   * { box-sizing: border-box; }
-  body { margin:0; font-family: Arial, Helvetica, sans-serif; background: var(--grey); color:#1a1a1a; padding-bottom: 100px; }
+  body { margin:0; font-family: Arial, Helvetica, sans-serif; background: var(--grey); color:#1a1a1a; padding-bottom: 24px; }
   header { background: var(--blue-dark); color:#fff; padding:16px 16px 20px; position: sticky; top:0; z-index:10; }
   header h1 { margin:0 0 4px; font-size:20px; }
   header .sub { font-size:12px; opacity:.85; }
@@ -38,7 +38,7 @@
   .field-block textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:7px; font-size:13px; font-family:inherit; resize:vertical; min-height:44px; }
   .add-punto-btn { width:100%; padding:9px; border-radius:8px; border:1px dashed var(--blue-med); background:#fff; color:var(--blue-med); font-weight:bold; font-size:12px; cursor:pointer; }
   .add-machine-btn { width:100%; padding:14px; border-radius:10px; border:2px dashed var(--blue-dark); background:#fff; color:var(--blue-dark); font-weight:bold; font-size:14px; cursor:pointer; margin-bottom:20px; }
-  .fab-bar { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--border); padding:10px 12px; box-shadow:0 -2px 8px rgba(0,0,0,.08); }
+  .fab-bar { background:#fff; border-top:1px solid var(--border); border-radius:10px; margin:12px; padding:14px 12px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
   .export-btn { width:100%; padding:14px; border-radius:10px; border:none; background: var(--blue-dark); color:#fff; font-weight:bold; font-size:15px; cursor:pointer; }
   .warn { font-size:11px; color:#8a6d3b; background:#fff8e6; border:1px solid #f0e2b6; border-radius:6px; padding:8px 10px; margin:12px; }
   .draft-bar { display:flex; gap:8px; margin:12px; }
@@ -68,6 +68,7 @@
 <header>
   <h1>📋 Ispezione in Campo</h1>
   <div class="sub">Report Ispezione Visual — export Excel multi-foglio</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-04.3</div>
 </header>
 
 <div class="meta">
@@ -1195,7 +1196,7 @@ function dbxFolder() {
 
 async function dropboxUpload(path, blobOrString) {
   const token = await ensureDropboxToken();
-  if (!token) { showDraftStatus('⚠️ Collega prima Dropbox.'); return false; }
+  if (!token) { showDraftStatus('⚠️ Collega prima Dropbox (token mancante).'); alert('Non risulti collegato a Dropbox (nessun token valido). Premi di nuovo "Collega Dropbox".'); return false; }
   const body = typeof blobOrString === 'string' ? new Blob([blobOrString]) : blobOrString;
   try {
     const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
@@ -1207,8 +1208,16 @@ async function dropboxUpload(path, blobOrString) {
       },
       body,
     });
-    return resp.ok;
-  } catch (e) { return false; }
+    if (!resp.ok) {
+      const errText = await resp.text();
+      alert('Dropbox ha rifiutato il salvataggio.\nStato HTTP: ' + resp.status + '\nDettaglio: ' + errText.slice(0, 500));
+      return false;
+    }
+    return true;
+  } catch (e) {
+    alert('Errore di rete durante il salvataggio su Dropbox: ' + e.message);
+    return false;
+  }
 }
 
 async function dropboxDownload(path) {
