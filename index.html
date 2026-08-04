@@ -68,7 +68,7 @@
 <header>
   <h1>📋 Ispezione in Campo</h1>
   <div class="sub">Report Ispezione Visual — export Excel multi-foglio</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-04.3</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-04.4</div>
 </header>
 
 <div class="meta">
@@ -125,9 +125,17 @@
     <button class="draft-btn save" id="dbx-connect-btn" onclick="connectDropbox()">🔗 Collega Dropbox</button>
     <button class="draft-btn file" onclick="disconnectDropbox()">🔌 Scollega</button>
   </div>
+  <label>Nome bozza (per averne più di una)</label>
+  <input id="dbx-draft-name" placeholder="es. QTA-Agosto — lascia vuoto per usare 'corrente'">
   <div class="draft-bar" style="margin:0 0 8px;">
     <button class="draft-btn file" onclick="saveDraftToDropbox()">☁️ Salva bozza</button>
-    <button class="draft-btn file" onclick="loadDraftFromDropbox()">☁️ Riprendi bozza</button>
+    <button class="draft-btn file" onclick="refreshDropboxDraftList()">🔄 Aggiorna elenco bozze</button>
+  </div>
+  <select id="dbx-draft-list" style="width:100%; padding:9px 10px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit;">
+    <option value="">— scegli una bozza salvata —</option>
+  </select>
+  <div class="draft-bar" style="margin:0 0 8px;">
+    <button class="draft-btn file" onclick="loadSelectedDraftFromDropbox()">☁️ Carica bozza selezionata</button>
   </div>
   <div class="draft-bar" style="margin:0;">
     <button class="draft-btn file" onclick="importRegistryFromDropbox()">☁️ Importa elenco macchine</button>
@@ -1236,22 +1244,65 @@ async function dropboxDownload(path) {
   } catch (e) { return null; }
 }
 
-async function saveDraftToDropbox() {
-  const payload = JSON.stringify({ meta: collectMeta(), macchine, macchinaCounter });
-  const ok = await dropboxUpload(dbxFolder() + '/bozza-corrente.json', payload);
-  showDraftStatus(ok ? '☁️ Bozza salvata su Dropbox.' : '⚠️ Salvataggio su Dropbox non riuscito.');
+function draftFilename() {
+  const name = (document.getElementById('dbx-draft-name').value || '').trim();
+  const safe = name ? sanitizeFilenamePart(name) : 'corrente';
+  return 'bozza-' + safe + '.json';
 }
 
-async function loadDraftFromDropbox() {
-  const resp = await dropboxDownload(dbxFolder() + '/bozza-corrente.json');
-  if (!resp) { showDraftStatus('Nessuna bozza trovata su Dropbox.'); return; }
+async function saveDraftToDropbox() {
+  const payload = JSON.stringify({ meta: collectMeta(), macchine, macchinaCounter });
+  const filename = draftFilename();
+  const ok = await dropboxUpload(dbxFolder() + '/' + filename, payload);
+  showDraftStatus(ok ? '☁️ Bozza salvata come ' + filename : '⚠️ Salvataggio su Dropbox non riuscito.');
+}
+
+async function dropboxListFolder(path) {
+  const token = await ensureDropboxToken();
+  if (!token) { showDraftStatus('⚠️ Collega prima Dropbox.'); return null; }
+  try {
+    const resp = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, recursive: false }),
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      alert('Dropbox ha rifiutato la lettura della cartella.\nStato HTTP: ' + resp.status + '\nDettaglio: ' + errText.slice(0, 500));
+      return null;
+    }
+    return await resp.json();
+  } catch (e) {
+    alert('Errore di rete leggendo la cartella Dropbox: ' + e.message);
+    return null;
+  }
+}
+
+async function refreshDropboxDraftList() {
+  const data = await dropboxListFolder(dbxFolder());
+  const sel = document.getElementById('dbx-draft-list');
+  if (!data) return;
+  const files = (data.entries || [])
+    .filter(e => e['.tag'] === 'file' && /^bozza-.*\.json$/i.test(e.name))
+    .sort((a, b) => new Date(b.client_modified) - new Date(a.client_modified));
+  sel.innerHTML = '<option value="">— scegli una bozza salvata —</option>' +
+    files.map(f => `<option value="${escapeAttr(f.name)}">${escapeHtml(f.name)} — ${new Date(f.client_modified).toLocaleString('it-IT')}</option>`).join('');
+  showDraftStatus('🔄 Trovate ' + files.length + ' bozze su Dropbox.');
+}
+
+async function loadSelectedDraftFromDropbox() {
+  const sel = document.getElementById('dbx-draft-list');
+  const name = sel.value;
+  if (!name) { alert('Scegli prima una bozza dall\'elenco (premi prima "Aggiorna elenco bozze" se è vuoto).'); return; }
+  const resp = await dropboxDownload(dbxFolder() + '/' + name);
+  if (!resp) { showDraftStatus('Bozza non trovata su Dropbox.'); return; }
   try {
     const data = JSON.parse(await resp.text());
     applyMeta(data.meta);
     macchine = data.macchine || [];
     macchinaCounter = data.macchinaCounter || macchine.length;
     render();
-    showDraftStatus('☁️ Bozza caricata da Dropbox.');
+    showDraftStatus('☁️ Bozza caricata: ' + name);
   } catch (e) {
     showDraftStatus('⚠️ Bozza su Dropbox non leggibile.');
   }
@@ -1610,9 +1661,12 @@ function initDropboxFields() {
   const appKeyEl = document.getElementById('dbx-app-key');
   const folderEl = document.getElementById('dbx-folder');
   const regEl = document.getElementById('dbx-registry-name');
+  const draftNameEl = document.getElementById('dbx-draft-name');
   if (appKeyEl) appKeyEl.value = dbxGet('dbx_app_key') || '';
   if (folderEl && dbxGet('dbx_folder')) folderEl.value = dbxGet('dbx_folder');
   if (regEl && dbxGet('dbx_registry_name')) regEl.value = dbxGet('dbx_registry_name');
+  if (draftNameEl && dbxGet('dbx_draft_name')) draftNameEl.value = dbxGet('dbx_draft_name');
+  if (draftNameEl) draftNameEl.addEventListener('change', () => dbxSet('dbx_draft_name', draftNameEl.value.trim()));
   updateDropboxStatusUI();
 }
 
