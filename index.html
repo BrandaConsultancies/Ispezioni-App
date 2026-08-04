@@ -68,7 +68,7 @@
 <header>
   <h1>📋 Ispezione in Campo</h1>
   <div class="sub">Report Ispezione Visual — export Excel multi-foglio</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-04.4</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-05.1</div>
 </header>
 
 <div class="meta">
@@ -158,10 +158,6 @@
   <div style="font-size:11px; color:#667; margin-top:6px;">Alternativa manuale ai pulsanti Dropbox qui sopra — utile se in un momento specifico non sei collegato.</div>
 </details>
 
-<div class="draft-bar">
-  <button class="draft-btn save" onclick="saveDraft()">💾 Salva bozza (dentro Claude)</button>
-  <button class="draft-btn load" onclick="loadDraft(false)">📂 Riprendi bozza (dentro Claude)</button>
-</div>
 <div class="draft-bar">
   <button class="draft-btn file" onclick="downloadDraftFile()">⬇️ Bozza su file</button>
   <button class="draft-btn file" onclick="triggerLoadDraftFile()">⬆️ Carica bozza da file</button>
@@ -391,34 +387,6 @@ function showDraftStatus(msg) {
   setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4000);
 }
 
-async function saveDraft() {
-  if (!window.storage) { alert('Il salvataggio bozza funziona solo aprendo questa app dentro Claude, non da file scaricato sul dispositivo.'); return; }
-  try {
-    const payload = JSON.stringify({ meta: collectMeta(), macchine, macchinaCounter });
-    const result = await window.storage.set('bozza-ispezione', payload, false);
-    if (result) showDraftStatus('✅ Bozza salvata — la ritrovi con "Riprendi bozza".');
-    else showDraftStatus('⚠️ Salvataggio non riuscito (bozza troppo pesante? prova a ridurre le foto).');
-  } catch (e) {
-    showDraftStatus('⚠️ Salvataggio non riuscito. Riprova.');
-  }
-}
-
-async function loadDraft(explicit) {
-  if (!window.storage) { if (explicit) alert('Il ripristino bozza funziona solo aprendo questa app dentro Claude, non da file scaricato sul dispositivo.'); return; }
-  try {
-    const result = await window.storage.get('bozza-ispezione', false);
-    if (!result) { if (explicit) showDraftStatus('Nessuna bozza salvata trovata.'); return; }
-    const data = JSON.parse(result.value);
-    applyMeta(data.meta);
-    macchine = data.macchine || [];
-    macchinaCounter = data.macchinaCounter || macchine.length;
-    render();
-    showDraftStatus('📂 Bozza ripristinata.');
-  } catch (e) {
-    if (explicit) showDraftStatus('Nessuna bozza salvata trovata.');
-  }
-}
-
 function buildBaseFilename() {
   const cliente = document.getElementById('meta-cliente').value || '';
   const sito = document.getElementById('meta-sito').value || '';
@@ -490,22 +458,20 @@ function renderDatalists() {
   });
 }
 
-async function loadAnagrafiche() {
-  if (!window.storage) return;
+function loadAnagrafiche() {
   try {
-    const result = await window.storage.get('anagrafiche-liste', false);
-    if (result) {
-      const data = JSON.parse(result.value);
+    const raw = localStorage.getItem('anagrafiche-liste');
+    if (raw) {
+      const data = JSON.parse(raw);
       anagrafiche = data.anagrafiche || data; // retrocompatibile con formato precedente
       machineRegistry = data.machineRegistry || [];
     }
-  } catch (e) { /* nessuna lista salvata ancora */ }
+  } catch (e) { /* nessuna lista salvata ancora, o localStorage non disponibile */ }
   renderDatalists();
 }
 
-async function saveAnagrafiche() {
-  if (!window.storage) return;
-  try { await window.storage.set('anagrafiche-liste', JSON.stringify({ anagrafiche, machineRegistry }), false); } catch (e) { /* ignora */ }
+function saveAnagrafiche() {
+  try { localStorage.setItem('anagrafiche-liste', JSON.stringify({ anagrafiche, machineRegistry })); } catch (e) { /* ignora */ }
 }
 
 function registerAnagraficaValue(field, value) {
@@ -1671,7 +1637,6 @@ function initDropboxFields() {
 }
 
 render();
-loadDraft(false);
 loadAnagrafiche();
 initDropboxFields();
 handleDropboxRedirect();
