@@ -7,58 +7,66 @@
 <style>
   :root { --blue-dark:#0263AC; --blue-med:#2E75B6; --grey:#f2f4f7; --border:#dde3ea; --yellow:#fff3b0; }
   * { box-sizing: border-box; }
-  body { margin:0; font-family: Arial, Helvetica, sans-serif; background: var(--grey); color:#1a1a1a; padding-bottom: 24px; }
+  body { margin:0; font-family: Arial, Helvetica, sans-serif; background: var(--grey); color:#1a1a1a; padding-bottom: 24px; font-size:16px; }
   header { background: var(--blue-dark); color:#fff; padding:16px 16px 20px; position: sticky; top:0; z-index:10; }
-  header h1 { margin:0 0 4px; font-size:20px; }
-  header .sub { font-size:12px; opacity:.85; }
+  header h1 { margin:0 0 4px; font-size:22px; }
+  header .sub { font-size:13px; opacity:.85; }
   .meta { background:#fff; margin:12px; padding:12px; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
-  .meta input, .meta textarea { width:100%; padding:9px 10px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; font-size:14px; font-family:inherit; }
+  .meta input, .meta textarea { width:100%; padding:11px 10px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; font-size:16px; font-family:inherit; }
   .meta textarea { min-height:60px; resize:vertical; }
-  .meta label { font-size:11px; color:#667; display:block; margin-bottom:3px; }
-  .meta .section-title { font-size:13px; font-weight:bold; color: var(--blue-dark); margin: 4px 0 8px; }
+  .meta label { font-size:13px; color:#667; display:block; margin-bottom:3px; }
+  .meta .section-title { font-size:15px; font-weight:bold; color: var(--blue-dark); margin: 4px 0 8px; }
   main { padding:0 12px; }
   .machine-card { background:#fff; border-radius:10px; margin-bottom:16px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,.08); border-left:4px solid var(--blue-dark); }
   .machine-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
   .machine-header .mh-fields { flex:1; display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
   .mh-fields .mh-col { display:flex; flex-direction:column; }
-  .mh-fields .mh-col label { font-size:9px; text-transform:uppercase; letter-spacing:.02em; color:#889; margin-bottom:2px; }
-  .machine-header input { padding:7px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit; }
+  .mh-fields .mh-col label { font-size:11px; text-transform:uppercase; letter-spacing:.02em; color:#889; margin-bottom:2px; }
+  .machine-header input { padding:9px 8px; border:1px solid var(--border); border-radius:6px; font-size:15px; font-family:inherit; }
   .machine-header input.nome { font-weight:bold; color: var(--blue-dark); }
-  .del-btn { background:none; border:none; color:#c0392b; font-size:18px; cursor:pointer; padding:2px 6px; flex-shrink:0; }
+  .del-btn { background:none; border:none; color:#c0392b; font-size:20px; cursor:pointer; padding:2px 6px; flex-shrink:0; }
   .punto-card { background: var(--grey); border-radius:8px; padding:10px; margin-bottom:10px; border-left:3px solid var(--blue-med); }
-  .punto-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:12px; font-weight:bold; color: var(--blue-med); }
-  .punto-photo-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
-  .punto-photo-row img { width:60px; height:60px; object-fit:cover; border-radius:6px; }
-  .action-btn { padding:9px 8px; border-radius:8px; border:none; font-size:12px; font-weight:bold; cursor:pointer; color:#fff; flex:1; }
+  .punto-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:14px; font-weight:bold; color: var(--blue-med); }
+  .punto-photo-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
+  .punto-photo-row img { width:88px; height:88px; object-fit:cover; border-radius:6px; cursor:zoom-in; }
+  .photo-thumb-wrap { position:relative; width:88px; height:88px; }
+  .photo-thumb-wrap img { width:88px; height:88px; }
+  .photo-thumb-del { position:absolute; top:-7px; right:-7px; background:#c0392b; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:13px; line-height:1; cursor:pointer; padding:0; }
+  .action-btn.photo[disabled] { opacity:.5; cursor:not-allowed; }
+  .action-btn { padding:11px 8px; border-radius:8px; border:none; font-size:14px; font-weight:bold; cursor:pointer; color:#fff; flex:1; }
   .action-btn.photo { background: var(--blue-med); }
   .action-btn.mic { background:#2e9e5b; }
   .action-btn.mic.recording { background:#c0392b; }
   .field-block { margin-bottom:8px; }
-  .field-block label { font-size:11px; color:#667; display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; }
-  .field-block textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:7px; font-size:13px; font-family:inherit; resize:vertical; min-height:44px; }
-  .add-punto-btn { width:100%; padding:9px; border-radius:8px; border:1px dashed var(--blue-med); background:#fff; color:var(--blue-med); font-weight:bold; font-size:12px; cursor:pointer; }
-  .add-machine-btn { width:100%; padding:14px; border-radius:10px; border:2px dashed var(--blue-dark); background:#fff; color:var(--blue-dark); font-weight:bold; font-size:14px; cursor:pointer; margin-bottom:20px; }
+  .field-block label { font-size:13px; color:#667; display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; }
+  .field-block textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:9px; font-size:16px; font-family:inherit; resize:vertical; min-height:48px; }
+  .add-punto-btn { width:100%; padding:11px; border-radius:8px; border:1px dashed var(--blue-med); background:#fff; color:var(--blue-med); font-weight:bold; font-size:14px; cursor:pointer; }
+  .add-machine-btn { width:100%; padding:14px; border-radius:10px; border:2px dashed var(--blue-dark); background:#fff; color:var(--blue-dark); font-weight:bold; font-size:16px; cursor:pointer; margin-bottom:20px; }
   .fab-bar { background:#fff; border-top:1px solid var(--border); border-radius:10px; margin:12px; padding:14px 12px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
-  .export-btn { width:100%; padding:14px; border-radius:10px; border:none; background: var(--blue-dark); color:#fff; font-weight:bold; font-size:15px; cursor:pointer; }
-  .warn { font-size:11px; color:#8a6d3b; background:#fff8e6; border:1px solid #f0e2b6; border-radius:6px; padding:8px 10px; margin:12px; }
+  .export-btn { width:100%; padding:14px; border-radius:10px; border:none; background: var(--blue-dark); color:#fff; font-weight:bold; font-size:17px; cursor:pointer; }
+  .warn { font-size:13px; color:#8a6d3b; background:#fff8e6; border:1px solid #f0e2b6; border-radius:6px; padding:8px 10px; margin:12px; }
   .draft-bar { display:flex; gap:8px; margin:12px; }
-  .draft-btn { flex:1; padding:11px 8px; border-radius:8px; border:1px solid var(--blue-dark); background:#fff; color:var(--blue-dark); font-weight:bold; font-size:13px; cursor:pointer; }
+  .draft-btn { flex:1; padding:12px 8px; border-radius:8px; border:1px solid var(--blue-dark); background:#fff; color:var(--blue-dark); font-weight:bold; font-size:14px; cursor:pointer; }
   .draft-btn.save { background: var(--blue-dark); color:#fff; }
-  .draft-btn.file { border-style:dashed; font-size:12px; }
-  .draft-status { text-align:center; font-size:12px; color: var(--blue-dark); min-height:16px; margin:-4px 12px 4px; }
+  .draft-btn.file { border-style:dashed; font-size:14px; }
+  .draft-status { text-align:center; font-size:13px; color: var(--blue-dark); min-height:16px; margin:-4px 12px 4px; }
   #draft-file-input { display:none; }
-  .format-label { display:block; font-size:11px; color:#667; margin-bottom:4px; }
-  #export-format { width:100%; padding:9px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit; margin-bottom:8px; }
+  .format-label { display:block; font-size:13px; color:#667; margin-bottom:4px; }
+  #export-format { width:100%; padding:11px 8px; border:1px solid var(--border); border-radius:6px; font-size:16px; font-family:inherit; margin-bottom:8px; }
   #print-area { display:none; }
   body.printing > *:not(#print-area) { display:none !important; }
   body.printing #print-area { display:block !important; }
   @media print {
     body:not(.printing) { display:none; }
   }
-  .empty { text-align:center; color:#999; font-size:13px; padding:30px 10px; }
+  .empty { text-align:center; color:#999; font-size:14px; padding:30px 10px; }
   input[type="file"] { display:none; }
   details.extra { background:#fff; margin:12px; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.08); padding:4px 12px; }
-  details.extra summary { padding:10px 0; font-size:13px; font-weight:bold; color: var(--blue-dark); cursor:pointer; }
+  details.extra summary { padding:10px 0; font-size:15px; font-weight:bold; color: var(--blue-dark); cursor:pointer; }
+  #photo-lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:2000; align-items:center; justify-content:center; padding:16px; }
+  #photo-lightbox.open { display:flex; }
+  #photo-lightbox img { max-width:100%; max-height:100%; object-fit:contain; border-radius:6px; }
+  #photo-lightbox .lightbox-close { position:absolute; top:16px; right:20px; color:#fff; font-size:32px; background:none; border:none; cursor:pointer; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -68,7 +76,7 @@
 <header>
   <h1>📋 Ispezione in Campo</h1>
   <div class="sub">Report Ispezione Visual — export Excel multi-foglio</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-05.1</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-05.5</div>
 </header>
 
 <div class="meta">
@@ -163,6 +171,10 @@
   <button class="draft-btn file" onclick="triggerLoadDraftFile()">⬆️ Carica bozza da file</button>
   <input type="file" id="draft-file-input" accept=".json" onchange="handleLoadDraftFile(event)">
 </div>
+<div class="draft-bar">
+  <button class="draft-btn file" onclick="recoverLocalAutosave()">↩️ Recupera ultimo salvataggio automatico</button>
+</div>
+<div style="font-size:12px; color:#667; margin:0 12px 8px;">Il salvataggio automatico gira da solo ogni 5 minuti (in locale su questo dispositivo, e anche su Dropbox se collegato) — non serve premere nulla.</div>
 <div id="draft-status" class="draft-status"></div>
 
 <div class="warn">
@@ -186,6 +198,7 @@
     <input type="checkbox" id="dbx-export-toggle" checked style="width:auto;"> Salva direttamente su Dropbox invece di scaricare (XLSX/DOCX)
   </label>
   <button class="export-btn" onclick="exportReport()">📤 Esporta report</button>
+  <div id="export-status" class="draft-status"></div>
 </div>
 
 <script>
@@ -380,11 +393,68 @@ function collectMeta() {
 function applyMeta(meta) {
   Object.keys(meta || {}).forEach(id => { const el = document.getElementById(id); if (el) el.value = meta[id]; });
 }
+function migrateMacchine(loadedMacchine) {
+  // Compatibilità con bozze salvate prima che i punti supportassero più foto:
+  // il vecchio formato aveva "foto" (un oggetto singolo o null), il nuovo ha "fotos" (array).
+  (loadedMacchine || []).forEach(m => {
+    (m.punti || []).forEach(p => {
+      if (!Array.isArray(p.fotos)) {
+        p.fotos = p.foto ? [p.foto] : [];
+      }
+    });
+  });
+  return loadedMacchine || [];
+}
+
+const AUTOSAVE_INTERVAL_MS = 5 * 60 * 1000;
+
+function autosaveToLocalStorage() {
+  try {
+    const payload = JSON.stringify({ meta: collectMeta(), macchine, macchinaCounter, savedAt: new Date().toISOString() });
+    localStorage.setItem('autosave-local', payload);
+    return true;
+  } catch (e) { return false; }
+}
+
+async function runAutosave() {
+  if (!macchine.length) return; // niente da salvare ancora
+  const localOk = autosaveToLocalStorage();
+  let dbxOk = false;
+  if (isDropboxConnected()) {
+    const payload = JSON.stringify({ meta: collectMeta(), macchine, macchinaCounter });
+    dbxOk = await dropboxUpload(dbxFolder() + '/bozza-autosave.json', payload, true);
+  }
+  const parts = [];
+  if (localOk) parts.push('locale');
+  if (dbxOk) parts.push('Dropbox');
+  if (parts.length) showDraftStatus('💾 Salvataggio automatico (' + parts.join(' + ') + ') — ' + new Date().toLocaleTimeString('it-IT'));
+}
+
+function recoverLocalAutosave() {
+  try {
+    const raw = localStorage.getItem('autosave-local');
+    if (!raw) { alert('Nessun salvataggio automatico locale trovato su questo dispositivo/browser.'); return; }
+    const data = JSON.parse(raw);
+    applyMeta(data.meta);
+    macchine = migrateMacchine(data.macchine || []);
+    macchinaCounter = data.macchinaCounter || macchine.length;
+    render();
+    const when = data.savedAt ? new Date(data.savedAt).toLocaleString('it-IT') : '—';
+    showDraftStatus('↩️ Recuperato salvataggio automatico del ' + when);
+  } catch (e) {
+    alert('Impossibile leggere il salvataggio automatico locale.');
+  }
+}
+
+setInterval(runAutosave, AUTOSAVE_INTERVAL_MS);
 function showDraftStatus(msg) {
-  const el = document.getElementById('draft-status');
-  if (!el) return;
-  el.textContent = msg;
-  setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4000);
+  const ids = ['draft-status', 'export-status'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 6000);
+  });
 }
 
 function buildBaseFilename() {
@@ -422,7 +492,7 @@ function handleLoadDraftFile(event) {
     try {
       const data = JSON.parse(e.target.result);
       applyMeta(data.meta);
-      macchine = data.macchine || [];
+      macchine = migrateMacchine(data.macchine || []);
       macchinaCounter = data.macchinaCounter || macchine.length;
       render();
       showDraftStatus('📂 Bozza caricata dal file.');
@@ -582,7 +652,7 @@ function handleLoadListsFile(event) {
 
 function addPunto(macchinaId) {
   const m = macchine.find(x => x.id === macchinaId);
-  m.punti.push({ id: 'pt' + Date.now() + Math.random(), foto: null, ncRilevata: '', soluzioneTecnica: '', note: '' });
+  m.punti.push({ id: 'pt' + Date.now() + Math.random(), fotos: [], ncRilevata: '', soluzioneTecnica: '', note: '' });
   render();
 }
 function deletePunto(macchinaId, puntoId) {
@@ -596,22 +666,47 @@ function updatePuntoField(macchinaId, puntoId, field, value) {
   if (p) p[field] = value;
 }
 
+const MAX_FOTO_PER_PUNTO = 5;
+
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('photo-lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('photo-lightbox').classList.remove('open');
+}
+
 function triggerFoto(macchinaId, puntoId) {
   document.getElementById('file-' + puntoId).click();
 }
 function handleFoto(macchinaId, puntoId, event) {
-  const file = event.target.files[0];
-  if (!file) return;
+  const files = Array.from(event.target.files || []);
+  if (!files.length) return;
   const m = macchine.find(x => x.id === macchinaId);
   const p = m.punti.find(x => x.id === puntoId);
-  const reader = new FileReader();
-  reader.onload = e => {
-    resizeImage(e.target.result, 1000, (dataUrl, w, h) => {
-      p.foto = { src: dataUrl, width: w, height: h };
-      render();
-    });
-  };
-  reader.readAsDataURL(file);
+  if (!p.fotos) p.fotos = [];
+  const remaining = MAX_FOTO_PER_PUNTO - p.fotos.length;
+  if (remaining <= 0) {
+    alert('Hai già ' + MAX_FOTO_PER_PUNTO + ' foto su questo punto (il massimo). Elimina una foto per aggiungerne un\'altra.');
+    event.target.value = '';
+    return;
+  }
+  const toProcess = files.slice(0, remaining);
+  if (files.length > remaining) {
+    alert('Aggiunte solo ' + remaining + ' foto: il limite è ' + MAX_FOTO_PER_PUNTO + ' per punto.');
+  }
+  let pending = toProcess.length;
+  toProcess.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      resizeImage(e.target.result, 1000, (dataUrl, w, h) => {
+        p.fotos.push({ id: 'ph' + Date.now() + Math.random(), src: dataUrl, width: w, height: h });
+        pending--;
+        if (pending === 0) render();
+      });
+    };
+    reader.readAsDataURL(file);
+  });
   event.target.value = '';
 }
 function resizeImage(dataUrl, maxWidth, callback) {
@@ -627,10 +722,10 @@ function resizeImage(dataUrl, maxWidth, callback) {
   };
   img.src = dataUrl;
 }
-function deleteFoto(macchinaId, puntoId) {
+function deleteFoto(macchinaId, puntoId, fotoId) {
   const m = macchine.find(x => x.id === macchinaId);
   const p = m.punti.find(x => x.id === puntoId);
-  if (p) p.foto = null;
+  if (p) p.fotos = (p.fotos || []).filter(f => f.id !== fotoId);
   render();
 }
 
@@ -700,9 +795,15 @@ function render() {
             <button class="del-btn" style="font-size:14px" onclick="deletePunto('${m.id}','${p.id}')">✕</button>
           </div>
           <div class="punto-photo-row">
-            ${p.foto ? `<img src="${p.foto.src}">` : ''}
-            <button class="action-btn photo" onclick="triggerFoto('${m.id}','${p.id}')">📷 ${p.foto ? 'Sostituisci foto' : 'Aggiungi foto'}</button>
-            <input type="file" id="file-${p.id}" accept="image/*" capture="environment" onchange="handleFoto('${m.id}','${p.id}', event)">
+            ${(p.fotos || []).map(ph => `
+              <div class="photo-thumb-wrap">
+                <img src="${ph.src}" onclick="openLightbox('${ph.src}')">
+                <button class="photo-thumb-del" onclick="deleteFoto('${m.id}','${p.id}','${ph.id}')">✕</button>
+              </div>`).join('')}
+          </div>
+          <div class="punto-photo-row">
+            <button class="action-btn photo" ${(p.fotos || []).length >= MAX_FOTO_PER_PUNTO ? 'disabled' : ''} onclick="triggerFoto('${m.id}','${p.id}')">📷 Aggiungi foto (${(p.fotos || []).length}/${MAX_FOTO_PER_PUNTO})</button>
+            <input type="file" id="file-${p.id}" accept="image/*" capture="environment" multiple onchange="handleFoto('${m.id}','${p.id}', event)">
           </div>
           <div class="field-block">
             <label>NC rilevata <button class="action-btn mic" id="mic-${p.id}" style="flex:none;padding:4px 8px;font-size:11px;" onclick="toggleRecording('${m.id}','${p.id}')">🎤 Detta NC</button></label>
@@ -889,6 +990,7 @@ async function exportExcel() {
     ], 40);
 
     m.punti.forEach((p, idx) => {
+      const fotos = p.fotos || [];
       const textH = Math.max(
         wrapHeight(p.ncRilevata, 42, 0),
         wrapHeight(p.soluzioneTecnica, 42, 0),
@@ -901,7 +1003,11 @@ async function exportExcel() {
         { col: 3, style: 7, text: p.soluzioneTecnica || '' },
         { col: 4, style: 7, text: p.note || '' },
       ], rowH);
-      if (p.foto) addImageToRow(ctx, mediaFiles, p.foto.src, 1, r);
+      if (fotos[0]) addImageToRow(ctx, mediaFiles, fotos[0].src, 1, r);
+      for (let i = 1; i < fotos.length; i++) {
+        const r2 = pushRow(ctx, [], 210);
+        addImageToRow(ctx, mediaFiles, fotos[i].src, 1, r2);
+      }
     });
 
     sheetDefs.push({ name: sanitizeSheetName(m.nomeMacchina, usedNames), ctx, dimensionCols: 'E', colWidths: [22,36,34,36,26] });
@@ -1168,9 +1274,12 @@ function dbxFolder() {
   return v.replace(/\/+$/, '');
 }
 
-async function dropboxUpload(path, blobOrString) {
+async function dropboxUpload(path, blobOrString, silent) {
   const token = await ensureDropboxToken();
-  if (!token) { showDraftStatus('⚠️ Collega prima Dropbox (token mancante).'); alert('Non risulti collegato a Dropbox (nessun token valido). Premi di nuovo "Collega Dropbox".'); return false; }
+  if (!token) {
+    if (!silent) { showDraftStatus('⚠️ Collega prima Dropbox (token mancante).'); alert('Non risulti collegato a Dropbox (nessun token valido). Premi di nuovo "Collega Dropbox".'); }
+    return false;
+  }
   const body = typeof blobOrString === 'string' ? new Blob([blobOrString]) : blobOrString;
   try {
     const resp = await fetch('https://content.dropboxapi.com/2/files/upload', {
@@ -1183,13 +1292,15 @@ async function dropboxUpload(path, blobOrString) {
       body,
     });
     if (!resp.ok) {
-      const errText = await resp.text();
-      alert('Dropbox ha rifiutato il salvataggio.\nStato HTTP: ' + resp.status + '\nDettaglio: ' + errText.slice(0, 500));
+      if (!silent) {
+        const errText = await resp.text();
+        alert('Dropbox ha rifiutato il salvataggio.\nStato HTTP: ' + resp.status + '\nDettaglio: ' + errText.slice(0, 500));
+      }
       return false;
     }
     return true;
   } catch (e) {
-    alert('Errore di rete durante il salvataggio su Dropbox: ' + e.message);
+    if (!silent) alert('Errore di rete durante il salvataggio su Dropbox: ' + e.message);
     return false;
   }
 }
@@ -1265,7 +1376,7 @@ async function loadSelectedDraftFromDropbox() {
   try {
     const data = JSON.parse(await resp.text());
     applyMeta(data.meta);
-    macchine = data.macchine || [];
+    macchine = migrateMacchine(data.macchine || []);
     macchinaCounter = data.macchinaCounter || macchine.length;
     render();
     showDraftStatus('☁️ Bozza caricata: ' + name);
@@ -1322,15 +1433,21 @@ async function finalizeExport(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-function exportReport() {
+async function exportReport() {
   if (!macchine.length || !macchine.some(m => m.punti.length)) {
     alert('Aggiungi almeno una macchina con un punto ispezionato prima di esportare.');
     return;
   }
   const fmt = document.getElementById('export-format').value;
-  if (fmt === 'xlsx') return exportExcel();
-  if (fmt === 'docx') return exportDocx();
-  if (fmt === 'pdf') return exportPDF();
+  try {
+    if (fmt === 'xlsx') { await exportExcel(); return; }
+    if (fmt === 'docx') { await exportDocx(); return; }
+    if (fmt === 'pdf') { exportPDF(); return; }
+  } catch (e) {
+    const detail = (e && e.message) ? e.message : String(e);
+    alert('Errore durante la generazione del report (' + fmt.toUpperCase() + '):\n' + detail);
+    showDraftStatus('⚠️ Errore nella generazione del report.');
+  }
 }
 
 // ===== Export PDF (via stampa del browser) =====
@@ -1373,7 +1490,7 @@ function buildPrintHtml() {
     m.punti.forEach((p, idx) => {
       h += `<tr>` +
         `<td style="padding:4px;border:1px solid #ddd;text-align:center;">${idx + 1}</td>` +
-        `<td style="padding:4px;border:1px solid #ddd;width:140px;">${p.foto ? `<img src="${p.foto.src}" style="width:130px;">` : ''}</td>` +
+        `<td style="padding:4px;border:1px solid #ddd;width:140px;">${(p.fotos || []).map(ph => `<img src="${ph.src}" style="width:130px;display:block;margin-bottom:4px;">`).join('')}</td>` +
         `<td style="padding:4px;border:1px solid #ddd;white-space:pre-wrap;">${escapeHtml(p.ncRilevata)}</td>` +
         `<td style="padding:4px;border:1px solid #ddd;white-space:pre-wrap;">${escapeHtml(p.soluzioneTecnica)}</td>` +
         `<td style="padding:4px;border:1px solid #ddd;white-space:pre-wrap;">${escapeHtml(p.note)}</td>` +
@@ -1560,7 +1677,7 @@ async function exportDocx() {
     ]);
     m.punti.forEach((p, idx) => {
       bodyXml += heading('Punto ' + (idx + 1), { size: 24, color: '2E75B6' });
-      if (p.foto) bodyXml += imageParagraph(p.foto.src, p.foto.width, p.foto.height);
+      (p.fotos || []).forEach(ph => { bodyXml += imageParagraph(ph.src, ph.width, ph.height); });
       bodyXml += richParagraph([{ text: 'NC rilevata: ', bold: true }, { text: p.ncRilevata || '' }]);
       bodyXml += richParagraph([{ text: 'Soluzione Tecnica: ', bold: true }, { text: p.soluzioneTecnica || '' }]);
       if ((p.note || '').trim()) bodyXml += richParagraph([{ text: 'Note: ', bold: true }, { text: p.note }]);
@@ -1642,6 +1759,10 @@ initDropboxFields();
 handleDropboxRedirect();
 </script>
 <div id="print-area"></div>
+<div id="photo-lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="">
+</div>
 <datalist id="list-reparti"></datalist>
 <datalist id="list-macchine"></datalist>
 <datalist id="list-codici"></datalist>
