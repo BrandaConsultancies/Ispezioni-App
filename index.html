@@ -81,7 +81,7 @@
 <header>
   <h1>📋 Ispezione</h1>
   <div class="sub">Report di Ispezione</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.4</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.6</div>
 </header>
 
 <div class="meta">
@@ -626,12 +626,19 @@ function updatePuntoSuggestions(field, puntoId, query) {
   const listKey = PUNTO_FIELD_TO_LIST[field];
   const box = document.getElementById('sugg-' + field + '-' + puntoId);
   if (!box || !listKey) return;
+  const list = anagrafiche[listKey] || [];
+  if (!list.length) { box.innerHTML = ''; return; }
   const q = (query || '').toLowerCase().trim();
-  if (q.length < 2) { box.innerHTML = ''; return; }
-  const matches = (anagrafiche[listKey] || [])
-    .filter(v => v.toLowerCase().includes(q) && v.toLowerCase() !== q)
-    .slice(0, 5);
-  box.innerHTML = matches.map(v =>
+  let items;
+  if (q.length < 2) {
+    // Campo vuoto o appena toccato: mostra le voci più recenti già scritte, da cui scegliere
+    items = list.slice(-8).reverse();
+  } else {
+    items = list
+      .filter(v => v.toLowerCase().includes(q) && v.toLowerCase() !== q)
+      .slice(0, 8);
+  }
+  box.innerHTML = items.map(v =>
     `<button type="button" class="chip" onclick="applyPuntoSuggestion('${field}','${puntoId}', this)" data-val="${escapeAttr(v)}">${escapeHtml(v.length > 60 ? v.slice(0, 60) + '…' : v)}</button>`
   ).join('');
 }
@@ -684,6 +691,33 @@ function updateMacchinaField(id, field, value) {
       if (changed) render();
     }
   }
+}
+
+function updateMacchinaSuggestions(field, macchinaId, query) {
+  const listKey = FIELD_TO_LIST[field];
+  const box = document.getElementById('sugg-' + field + '-' + macchinaId);
+  if (!box || !listKey) return;
+  let list = anagrafiche[listKey] || [];
+  if (listKey === 'codici') {
+    list = Array.from(new Set([...list, ...machineRegistry.map(r => r.codice)])).filter(Boolean);
+  }
+  if (!list.length) { box.innerHTML = ''; return; }
+  const q = (query || '').toLowerCase().trim();
+  let items;
+  if (q.length < 2) {
+    items = list.slice(-8).reverse();
+  } else {
+    items = list.filter(v => v.toLowerCase().includes(q) && v.toLowerCase() !== q).slice(0, 8);
+  }
+  box.innerHTML = items.map(v =>
+    `<button type="button" class="chip" onclick="applyMacchinaSuggestion('${field}','${macchinaId}', this)" data-val="${escapeAttr(v)}">${escapeHtml(v.length > 60 ? v.slice(0, 60) + '…' : v)}</button>`
+  ).join('');
+}
+
+function applyMacchinaSuggestion(field, macchinaId, btn) {
+  const val = btn.getAttribute('data-val');
+  updateMacchinaField(macchinaId, field, val);
+  render();
 }
 
 function triggerMachineRegistryImport() {
@@ -1110,9 +1144,27 @@ function render() {
     card.innerHTML = `
       <div class="machine-header">
         <div class="mh-fields">
-          <div class="mh-col"><label>Reparto</label><input list="list-reparti" placeholder="Reparto" value="${escapeAttr(m.reparto)}" onchange="updateMacchinaField('${m.id}','reparto', this.value)"></div>
-          <div class="mh-col"><label>Macchina</label><input list="list-macchine" class="nome" placeholder="Macchina" value="${escapeAttr(m.nomeMacchina)}" onchange="updateMacchinaField('${m.id}','nomeMacchina', this.value)"></div>
-          <div class="mh-col"><label>Codice</label><input list="list-codici" placeholder="Codice" value="${escapeAttr(m.codiceMacchina)}" onchange="updateMacchinaField('${m.id}','codiceMacchina', this.value)"></div>
+          <div class="mh-col"><label>Reparto</label>
+            <input placeholder="Reparto" value="${escapeAttr(m.reparto)}"
+              onfocus="updateMacchinaSuggestions('reparto','${m.id}', this.value)"
+              oninput="updateMacchinaSuggestions('reparto','${m.id}', this.value)"
+              onchange="updateMacchinaField('${m.id}','reparto', this.value)">
+            <div class="sugg-row" id="sugg-reparto-${m.id}"></div>
+          </div>
+          <div class="mh-col"><label>Macchina</label>
+            <input class="nome" placeholder="Macchina" value="${escapeAttr(m.nomeMacchina)}"
+              onfocus="updateMacchinaSuggestions('nomeMacchina','${m.id}', this.value)"
+              oninput="updateMacchinaSuggestions('nomeMacchina','${m.id}', this.value)"
+              onchange="updateMacchinaField('${m.id}','nomeMacchina', this.value)">
+            <div class="sugg-row" id="sugg-nomeMacchina-${m.id}"></div>
+          </div>
+          <div class="mh-col"><label>Codice</label>
+            <input placeholder="Codice" value="${escapeAttr(m.codiceMacchina)}"
+              onfocus="updateMacchinaSuggestions('codiceMacchina','${m.id}', this.value)"
+              oninput="updateMacchinaSuggestions('codiceMacchina','${m.id}', this.value)"
+              onchange="updateMacchinaField('${m.id}','codiceMacchina', this.value)">
+            <div class="sugg-row" id="sugg-codiceMacchina-${m.id}"></div>
+          </div>
         </div>
         <button class="del-btn" onclick="deleteMacchina('${m.id}')">✕</button>
       </div>
@@ -1136,6 +1188,7 @@ function render() {
           <div class="field-block">
             <label>NC rilevata / Osservazione <button class="action-btn mic" id="mic-${p.id}" style="flex:none;padding:4px 8px;font-size:11px;" onclick="toggleRecording('${m.id}','${p.id}')">🎤 Detta NC</button></label>
             <textarea id="nc-${p.id}" placeholder="Descrizione non conformità o osservazione..."
+              onfocus="updatePuntoSuggestions('ncRilevata','${p.id}', this.value)"
               oninput="updatePuntoField('${m.id}','${p.id}','ncRilevata', this.value); updatePuntoSuggestions('ncRilevata','${p.id}', this.value)"
               onblur="learnPuntoFieldValue('ncRilevata', this.value)">${escapeHtml(p.ncRilevata)}</textarea>
             <div class="sugg-row" id="sugg-ncRilevata-${p.id}"></div>
@@ -1143,6 +1196,7 @@ function render() {
           <div class="field-block">
             <label>Soluzione Tecnica Suggerita</label>
             <textarea placeholder="Azione correttiva proposta..."
+              onfocus="updatePuntoSuggestions('soluzioneTecnica','${p.id}', this.value)"
               oninput="updatePuntoField('${m.id}','${p.id}','soluzioneTecnica', this.value); updatePuntoSuggestions('soluzioneTecnica','${p.id}', this.value)"
               onblur="learnPuntoFieldValue('soluzioneTecnica', this.value)">${escapeHtml(p.soluzioneTecnica)}</textarea>
             <div class="sugg-row" id="sugg-soluzioneTecnica-${p.id}"></div>
@@ -1150,6 +1204,7 @@ function render() {
           <div class="field-block">
             <label>Note</label>
             <textarea placeholder="Note aggiuntive (opzionale)..."
+              onfocus="updatePuntoSuggestions('note','${p.id}', this.value)"
               oninput="updatePuntoField('${m.id}','${p.id}','note', this.value); updatePuntoSuggestions('note','${p.id}', this.value)"
               onblur="learnPuntoFieldValue('note', this.value)">${escapeHtml(p.note)}</textarea>
             <div class="sugg-row" id="sugg-note-${p.id}"></div>
