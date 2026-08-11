@@ -32,6 +32,7 @@
   .photo-thumb-wrap { position:relative; width:88px; height:88px; }
   .photo-thumb-wrap img { width:88px; height:88px; }
   .photo-thumb-del { position:absolute; top:-7px; right:-7px; background:#c0392b; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:13px; line-height:1; cursor:pointer; padding:0; }
+  .photo-thumb-rotate { position:absolute; bottom:-7px; right:-7px; background: var(--blue-dark); color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:13px; line-height:1; cursor:pointer; padding:0; }
   .action-btn.photo[disabled] { opacity:.5; cursor:not-allowed; }
   .action-btn { padding:11px 8px; border-radius:8px; border:none; font-size:14px; font-weight:bold; cursor:pointer; color:#fff; flex:1; }
   .action-btn.photo { background: var(--blue-med); }
@@ -40,6 +41,8 @@
   .field-block { margin-bottom:8px; }
   .field-block label { font-size:13px; color:#667; display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; }
   .field-block textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:9px; font-size:16px; font-family:inherit; resize:vertical; min-height:48px; }
+  .sugg-row { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+  .sugg-row .chip { background:#eef2f7; border:1px solid var(--border); border-radius:14px; padding:5px 10px; font-size:12px; color:#334; cursor:pointer; }
   .add-punto-btn { width:100%; padding:11px; border-radius:8px; border:1px dashed var(--blue-med); background:#fff; color:var(--blue-med); font-weight:bold; font-size:14px; cursor:pointer; }
   .add-machine-btn { width:100%; padding:14px; border-radius:10px; border:2px dashed var(--blue-dark); background:#fff; color:var(--blue-dark); font-weight:bold; font-size:16px; cursor:pointer; margin-bottom:20px; }
   .fab-bar { background:#fff; border-top:1px solid var(--border); border-radius:10px; margin:12px; padding:14px 12px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
@@ -67,6 +70,8 @@
   #photo-lightbox.open { display:flex; }
   #photo-lightbox img { max-width:100%; max-height:100%; object-fit:contain; border-radius:6px; }
   #photo-lightbox .lightbox-close { position:absolute; top:16px; right:20px; color:#fff; font-size:32px; background:none; border:none; cursor:pointer; }
+  #photo-lightbox .lightbox-controls { position:absolute; bottom:24px; left:0; right:0; display:flex; justify-content:center; gap:12px; }
+  #photo-lightbox .lightbox-controls button { background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.4); border-radius:8px; padding:10px 16px; font-size:14px; cursor:pointer; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -74,9 +79,9 @@
 <body>
 
 <header>
-  <h1>📋 Ispezione in Campo</h1>
-  <div class="sub">Report Ispezione Visual — export Excel multi-foglio</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-05.5</div>
+  <h1>📋 Ispezione</h1>
+  <div class="sub">Report di Ispezione</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.3</div>
 </header>
 
 <div class="meta">
@@ -86,10 +91,15 @@
   <label>Sito</label>
   <input id="meta-sito" placeholder="es. Stabilimento Nord">
   <label>Tipo di ispezione</label>
-  <select id="meta-tipo-ispezione" style="width:100%; padding:9px 10px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; font-size:14px; font-family:inherit;">
+  <select id="meta-tipo-ispezione" onchange="toggleTipoIspezioneAltro()" style="width:100%; padding:9px 10px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; font-size:16px; font-family:inherit;">
     <option value="ATEX">ATEX</option>
     <option value="Machine Guarding">Machine Guarding</option>
+    <option value="Direttiva Macchine 2006/42/CE">Direttiva Macchine 2006/42/CE</option>
+    <option value="Direttiva Requisiti Minimi di Sicurezza e Salute 2009/104/CE">Direttiva Requisiti Minimi di Sicurezza e Salute 2009/104/CE</option>
+    <option value="LockOut-TagOut">LockOut-TagOut</option>
+    <option value="ALTRO">ALTRO</option>
   </select>
+  <input id="meta-tipo-ispezione-altro" placeholder="Specifica il tipo di ispezione..." style="display:none;">
   <label>Ispettore</label>
   <input id="meta-ispettore" placeholder="es. BFE">
   <label>Fornitore 1</label>
@@ -164,6 +174,23 @@
     <input type="file" id="lists-file-input" accept=".json" onchange="handleLoadListsFile(event)">
   </div>
   <div style="font-size:11px; color:#667; margin-top:6px;">Alternativa manuale ai pulsanti Dropbox qui sopra — utile se in un momento specifico non sei collegato.</div>
+</details>
+
+<details class="extra">
+  <summary>📥 Importa dati esistenti</summary>
+  <div class="section-title" style="margin-top:4px;">Ispezione XLSX già compilata</div>
+  <div class="draft-bar" style="margin:8px 0 0;">
+    <button class="draft-btn file" onclick="triggerImportIspezioneXlsx()">📥 Importa ispezione (XLSX)</button>
+    <input type="file" id="ispezione-xlsx-input" accept=".xlsx,.xls" onchange="handleImportIspezioneXlsx(event)">
+  </div>
+  <div style="font-size:11px; color:#667; margin:6px 0 14px;">Legge Data ispezione, Ispettore, Reparto e Macchina da un file Excel già compilato (anche il tuo vecchio formato) e li inserisce nei campi corrispondenti. Crea una macchina per ogni foglio compatibile trovato.</div>
+
+  <div class="section-title">Foto come punti ispezionati</div>
+  <div class="draft-bar" style="margin:8px 0 0;">
+    <button class="draft-btn file" onclick="triggerImportFotoPunti()">📸 Importa foto come punti</button>
+    <input type="file" id="import-foto-input" accept="image/*" multiple onchange="handleImportFotoPunti(event)">
+  </div>
+  <div style="font-size:11px; color:#667; margin-top:6px;">Ti chiede Reparto e Macchina, poi scegli tutte le foto di quella cartella: ogni foto diventa un punto ispezionato separato (NC/Soluzione/Note da compilare dopo).</div>
 </details>
 
 <div class="draft-bar">
@@ -379,7 +406,7 @@ let macchinaCounter = 0;
 let activeRecognition = null;
 
 const META_FIELD_IDS = [
-  'meta-cliente','meta-sito','meta-tipo-ispezione','meta-ispettore',
+  'meta-cliente','meta-sito','meta-tipo-ispezione','meta-tipo-ispezione-altro','meta-ispettore',
   'meta-fornitore1','meta-personale-fornitore1','meta-fornitore2','meta-personale-fornitore2',
   'meta-data','meta-revisione','meta-referente','meta-personale-cliente',
   'meta-altro1','meta-altro2','meta-nota-generale'
@@ -392,6 +419,22 @@ function collectMeta() {
 }
 function applyMeta(meta) {
   Object.keys(meta || {}).forEach(id => { const el = document.getElementById(id); if (el) el.value = meta[id]; });
+  toggleTipoIspezioneAltro();
+}
+function toggleTipoIspezioneAltro() {
+  const sel = document.getElementById('meta-tipo-ispezione');
+  const altroInput = document.getElementById('meta-tipo-ispezione-altro');
+  if (!sel || !altroInput) return;
+  altroInput.style.display = (sel.value === 'ALTRO') ? 'block' : 'none';
+}
+function getTipoIspezioneValue() {
+  const sel = document.getElementById('meta-tipo-ispezione');
+  if (!sel) return '';
+  if (sel.value === 'ALTRO') {
+    const altro = document.getElementById('meta-tipo-ispezione-altro');
+    return (altro && altro.value.trim()) || 'ALTRO';
+  }
+  return sel.value;
 }
 function migrateMacchine(loadedMacchine) {
   // Compatibilità con bozze salvate prima che i punti supportassero più foto:
@@ -460,7 +503,7 @@ function showDraftStatus(msg) {
 function buildBaseFilename() {
   const cliente = document.getElementById('meta-cliente').value || '';
   const sito = document.getElementById('meta-sito').value || '';
-  const tipoIspezione = document.getElementById('meta-tipo-ispezione').value || '';
+  const tipoIspezione = getTipoIspezioneValue();
   const firstM = macchine[0] || {};
   const parts = [sanitizeFilenamePart(firstM.reparto), sanitizeFilenamePart(firstM.nomeMacchina), sanitizeFilenamePart(tipoIspezione)].filter(Boolean);
   return parts.length ? parts.join('_') : (sanitizeFilenamePart(cliente || sito) || 'bozza');
@@ -512,7 +555,7 @@ function addMacchina() {
 function deleteMacchina(id) { macchine = macchine.filter(m => m.id !== id); render(); }
 
 const FIELD_TO_LIST = { reparto: 'reparti', nomeMacchina: 'macchine', codiceMacchina: 'codici' };
-let anagrafiche = { reparti: [], macchine: [], codici: [] };
+let anagrafiche = { reparti: [], macchine: [], codici: [], nc: [], soluzioni: [], note: [] };
 let machineRegistry = []; // [{ codice, macchina, reparto }] importato da XLS
 
 function renderDatalists() {
@@ -533,7 +576,8 @@ function loadAnagrafiche() {
     const raw = localStorage.getItem('anagrafiche-liste');
     if (raw) {
       const data = JSON.parse(raw);
-      anagrafiche = data.anagrafiche || data; // retrocompatibile con formato precedente
+      const loaded = data.anagrafiche || data; // retrocompatibile con formato precedente
+      anagrafiche = Object.assign({ reparti: [], macchine: [], codici: [], nc: [], soluzioni: [], note: [] }, loaded);
       machineRegistry = data.machineRegistry || [];
     }
   } catch (e) { /* nessuna lista salvata ancora, o localStorage non disponibile */ }
@@ -555,6 +599,43 @@ function registerAnagraficaValue(field, value) {
     renderDatalists();
     saveAnagrafiche();
   }
+}
+
+const PUNTO_FIELD_TO_LIST = { ncRilevata: 'nc', soluzioneTecnica: 'soluzioni', note: 'note' };
+
+function learnPuntoFieldValue(field, value) {
+  const listKey = PUNTO_FIELD_TO_LIST[field];
+  if (!listKey || !value || !value.trim()) return;
+  const v = value.trim();
+  const list = anagrafiche[listKey] || (anagrafiche[listKey] = []);
+  if (!list.some(x => x.toLowerCase() === v.toLowerCase())) {
+    list.push(v);
+    if (list.length > 300) list.shift(); // evita crescita illimitata
+    saveAnagrafiche();
+  }
+}
+
+function updatePuntoSuggestions(field, puntoId, query) {
+  const listKey = PUNTO_FIELD_TO_LIST[field];
+  const box = document.getElementById('sugg-' + field + '-' + puntoId);
+  if (!box || !listKey) return;
+  const q = (query || '').toLowerCase().trim();
+  if (q.length < 2) { box.innerHTML = ''; return; }
+  const matches = (anagrafiche[listKey] || [])
+    .filter(v => v.toLowerCase().includes(q) && v.toLowerCase() !== q)
+    .slice(0, 5);
+  box.innerHTML = matches.map(v =>
+    `<button type="button" class="chip" onclick="applyPuntoSuggestion('${field}','${puntoId}', this)" data-val="${escapeAttr(v)}">${escapeHtml(v.length > 60 ? v.slice(0, 60) + '…' : v)}</button>`
+  ).join('');
+}
+
+function applyPuntoSuggestion(field, puntoId, btn) {
+  const val = btn.getAttribute('data-val');
+  for (const m of macchine) {
+    const p = m.punti.find(x => x.id === puntoId);
+    if (p) { p[field] = val; break; }
+  }
+  render();
 }
 
 function updateMacchinaField(id, field, value) {
@@ -609,6 +690,172 @@ function handleMachineRegistryFile(event) {
     }
   };
   reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+// ===== Import ispezione XLSX già compilata =====
+const KNOWN_REPORT_LABELS = new Set([
+  'cliente', 'sito', 'tipo di ispezione', 'ispettore', 'data ispezione', 'revisione', 'referente',
+  'reparto', 'macchina', 'codice', 'personale cliente', 'fornitore 1', 'personale fornitore 1',
+  'fornitore 2', 'personale fornitore 2', 'altro', 'nc rilevata', 'soluzione tecnica', 'note',
+  "n° progr.\npunto ispezionato", 'fotografia punto ispezionato',
+]);
+function findLabelValue(rows2D, label) {
+  const target = label.toLowerCase();
+  for (let r = 0; r < rows2D.length; r++) {
+    const row = rows2D[r] || [];
+    for (let c = 0; c < row.length; c++) {
+      const cell = String(row[c] == null ? '' : row[c]).trim().toLowerCase();
+      if (cell === target) {
+        const sameRowRaw = row[c + 1];
+        const sameRow = sameRowRaw != null ? String(sameRowRaw).trim() : '';
+        if (sameRow && !KNOWN_REPORT_LABELS.has(sameRow.toLowerCase())) return sameRow;
+        const belowRaw = rows2D[r + 1] && rows2D[r + 1][c];
+        const below = belowRaw != null ? String(belowRaw).trim() : '';
+        if (below && !KNOWN_REPORT_LABELS.has(below.toLowerCase())) return below;
+      }
+    }
+  }
+  return '';
+}
+function excelDateToIso(value) {
+  if (!value) return '';
+  const s = String(value).trim();
+  // formato gg/mm/aaaa già testuale
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
+  // formato aaaa-mm-gg già iso
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // numero seriale Excel
+  if (typeof value === 'number' || /^\d+(\.\d+)?$/.test(s)) {
+    const n = Number(value);
+    const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  }
+  return '';
+}
+
+function triggerImportIspezioneXlsx() {
+  document.getElementById('ispezione-xlsx-input').click();
+}
+
+function handleImportIspezioneXlsx(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { alert('Libreria di lettura XLS non caricata. Controlla la connessione e riprova.'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const sheetNames = wb.SheetNames.filter(n => !/^elenco nc$/i.test(n.trim()));
+
+      let dataIspezione = '', ispettore = '', revisione = '', cliente = '', sito = '', tipoIspezione = '';
+      let macchineTrovate = 0;
+
+      sheetNames.forEach(name => {
+        const sheet = wb.Sheets[name];
+        const rows2D = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        if (!dataIspezione) dataIspezione = excelDateToIso(findLabelValue(rows2D, 'Data ispezione'));
+        if (!ispettore) ispettore = findLabelValue(rows2D, 'Ispettore');
+        if (!revisione) revisione = findLabelValue(rows2D, 'Revisione');
+        if (!cliente) cliente = findLabelValue(rows2D, 'Cliente');
+        if (!sito) sito = findLabelValue(rows2D, 'Sito');
+        if (!tipoIspezione) tipoIspezione = findLabelValue(rows2D, 'Tipo di ispezione');
+
+        if (/^note generali/i.test(name.trim())) return; // il foglio generale non è una macchina
+
+        const reparto = findLabelValue(rows2D, 'Reparto');
+        const nomeMacchina = findLabelValue(rows2D, 'Macchina');
+        const codiceMacchina = findLabelValue(rows2D, 'Codice');
+        if (reparto || nomeMacchina) {
+          macchinaCounter++;
+          macchine.push({
+            id: 'm' + macchinaCounter,
+            reparto: reparto || '',
+            nomeMacchina: nomeMacchina || name.trim(),
+            codiceMacchina: codiceMacchina || '',
+            punti: [],
+          });
+          macchineTrovate++;
+        }
+      });
+
+      if (dataIspezione) document.getElementById('meta-data').value = dataIspezione;
+      if (ispettore) document.getElementById('meta-ispettore').value = ispettore;
+      if (revisione) document.getElementById('meta-revisione').value = revisione;
+      if (cliente) document.getElementById('meta-cliente').value = cliente;
+      if (sito) document.getElementById('meta-sito').value = sito;
+      if (tipoIspezione) {
+        const selTipo = document.getElementById('meta-tipo-ispezione');
+        const matchOption = Array.from(selTipo.options).some(o => o.value === tipoIspezione);
+        if (matchOption) {
+          selTipo.value = tipoIspezione;
+        } else {
+          selTipo.value = 'ALTRO';
+          document.getElementById('meta-tipo-ispezione-altro').value = tipoIspezione;
+        }
+        toggleTipoIspezioneAltro();
+      }
+
+      render();
+      showDraftStatus('📥 Ispezione importata: ' + macchineTrovate + ' macchin' + (macchineTrovate === 1 ? 'a' : 'e') + ' trovate.');
+      if (!dataIspezione && !ispettore && macchineTrovate === 0) {
+        alert('Non ho trovato campi riconoscibili (Data ispezione, Ispettore, Reparto, Macchina) in questo file. Verifica che le etichette nel foglio corrispondano a quelle usate dall\'app.');
+      }
+    } catch (err) {
+      alert('Non sono riuscito a leggere il file: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+// ===== Import foto come punti ispezionati =====
+let pendingImportReparto = '';
+let pendingImportMacchina = '';
+
+function triggerImportFotoPunti() {
+  const reparto = prompt('Reparto per queste foto:');
+  if (reparto === null) return;
+  const nomeMacchina = prompt('Macchina per queste foto:');
+  if (nomeMacchina === null) return;
+  pendingImportReparto = reparto.trim();
+  pendingImportMacchina = nomeMacchina.trim();
+  document.getElementById('import-foto-input').click();
+}
+
+function handleImportFotoPunti(event) {
+  const files = Array.from(event.target.files || []);
+  if (!files.length) return;
+  macchinaCounter++;
+  const nuovaMacchina = {
+    id: 'm' + macchinaCounter,
+    reparto: pendingImportReparto,
+    nomeMacchina: pendingImportMacchina || ('Macchina ' + macchinaCounter),
+    codiceMacchina: '',
+    punti: [],
+  };
+  macchine.push(nuovaMacchina);
+  let pending = files.length;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      resizeImage(e.target.result, 1000, (dataUrl, w, h) => {
+        nuovaMacchina.punti.push({
+          id: 'pt' + Date.now() + Math.random(),
+          fotos: [{ id: 'ph' + Date.now() + Math.random(), src: dataUrl, width: w, height: h }],
+          ncRilevata: '', soluzioneTecnica: '', note: '',
+        });
+        pending--;
+        if (pending === 0) {
+          render();
+          showDraftStatus('📸 Importate ' + files.length + ' foto come punti in "' + nuovaMacchina.nomeMacchina + '".');
+        }
+      });
+    };
+    reader.readAsDataURL(file);
+  });
   event.target.value = '';
 }
 
@@ -668,12 +915,60 @@ function updatePuntoField(macchinaId, puntoId, field, value) {
 
 const MAX_FOTO_PER_PUNTO = 5;
 
-function openLightbox(src) {
-  document.getElementById('lightbox-img').src = src;
+let lightboxRef = null; // { macchinaId, puntoId, fotoId }
+
+function findFoto(macchinaId, puntoId, fotoId) {
+  const m = macchine.find(x => x.id === macchinaId);
+  const p = m && m.punti.find(x => x.id === puntoId);
+  return p && (p.fotos || []).find(f => f.id === fotoId);
+}
+
+function openLightbox(macchinaId, puntoId, fotoId) {
+  const ph = findFoto(macchinaId, puntoId, fotoId);
+  if (!ph) return;
+  lightboxRef = { macchinaId, puntoId, fotoId };
+  document.getElementById('lightbox-img').src = ph.src;
   document.getElementById('photo-lightbox').classList.add('open');
 }
 function closeLightbox() {
   document.getElementById('photo-lightbox').classList.remove('open');
+  const hadRef = !!lightboxRef;
+  lightboxRef = null;
+  if (hadRef) render(); // aggiorna la miniatura se è stata ruotata mentre era aperta
+}
+
+function rotateImageData(ph, degrees, callback) {
+  const img = new Image();
+  img.onload = () => {
+    const swap = (degrees === 90 || degrees === 270 || degrees === -90);
+    const canvas = document.createElement('canvas');
+    canvas.width = swap ? img.height : img.width;
+    canvas.height = swap ? img.width : img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(degrees * Math.PI / 180);
+    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+    ph.src = canvas.toDataURL('image/jpeg', 0.85);
+    ph.width = canvas.width;
+    ph.height = canvas.height;
+    if (callback) callback();
+  };
+  img.src = ph.src;
+}
+
+function rotateFotoThumb(macchinaId, puntoId, fotoId, degrees) {
+  const ph = findFoto(macchinaId, puntoId, fotoId);
+  if (!ph) return;
+  rotateImageData(ph, degrees, () => render());
+}
+
+function rotateLightboxPhoto(degrees) {
+  if (!lightboxRef) return;
+  const ph = findFoto(lightboxRef.macchinaId, lightboxRef.puntoId, lightboxRef.fotoId);
+  if (!ph) return;
+  rotateImageData(ph, degrees, () => {
+    document.getElementById('lightbox-img').src = ph.src;
+  });
 }
 
 function triggerFoto(macchinaId, puntoId) {
@@ -797,7 +1092,8 @@ function render() {
           <div class="punto-photo-row">
             ${(p.fotos || []).map(ph => `
               <div class="photo-thumb-wrap">
-                <img src="${ph.src}" onclick="openLightbox('${ph.src}')">
+                <img src="${ph.src}" onclick="openLightbox('${m.id}','${p.id}','${ph.id}')">
+                <button class="photo-thumb-rotate" onclick="rotateFotoThumb('${m.id}','${p.id}','${ph.id}', 90)">↻</button>
                 <button class="photo-thumb-del" onclick="deleteFoto('${m.id}','${p.id}','${ph.id}')">✕</button>
               </div>`).join('')}
           </div>
@@ -806,16 +1102,25 @@ function render() {
             <input type="file" id="file-${p.id}" accept="image/*" capture="environment" multiple onchange="handleFoto('${m.id}','${p.id}', event)">
           </div>
           <div class="field-block">
-            <label>NC rilevata <button class="action-btn mic" id="mic-${p.id}" style="flex:none;padding:4px 8px;font-size:11px;" onclick="toggleRecording('${m.id}','${p.id}')">🎤 Detta NC</button></label>
-            <textarea id="nc-${p.id}" placeholder="Descrizione non conformità..." oninput="updatePuntoField('${m.id}','${p.id}','ncRilevata', this.value)">${escapeHtml(p.ncRilevata)}</textarea>
+            <label>NC rilevata / Osservazione <button class="action-btn mic" id="mic-${p.id}" style="flex:none;padding:4px 8px;font-size:11px;" onclick="toggleRecording('${m.id}','${p.id}')">🎤 Detta NC</button></label>
+            <textarea id="nc-${p.id}" placeholder="Descrizione non conformità o osservazione..."
+              oninput="updatePuntoField('${m.id}','${p.id}','ncRilevata', this.value); updatePuntoSuggestions('ncRilevata','${p.id}', this.value)"
+              onblur="learnPuntoFieldValue('ncRilevata', this.value)">${escapeHtml(p.ncRilevata)}</textarea>
+            <div class="sugg-row" id="sugg-ncRilevata-${p.id}"></div>
           </div>
           <div class="field-block">
-            <label>Soluzione Tecnica</label>
-            <textarea placeholder="Azione correttiva proposta..." oninput="updatePuntoField('${m.id}','${p.id}','soluzioneTecnica', this.value)">${escapeHtml(p.soluzioneTecnica)}</textarea>
+            <label>Soluzione Tecnica Suggerita</label>
+            <textarea placeholder="Azione correttiva proposta..."
+              oninput="updatePuntoField('${m.id}','${p.id}','soluzioneTecnica', this.value); updatePuntoSuggestions('soluzioneTecnica','${p.id}', this.value)"
+              onblur="learnPuntoFieldValue('soluzioneTecnica', this.value)">${escapeHtml(p.soluzioneTecnica)}</textarea>
+            <div class="sugg-row" id="sugg-soluzioneTecnica-${p.id}"></div>
           </div>
           <div class="field-block">
             <label>Note</label>
-            <textarea placeholder="Note aggiuntive (opzionale)..." oninput="updatePuntoField('${m.id}','${p.id}','note', this.value)">${escapeHtml(p.note)}</textarea>
+            <textarea placeholder="Note aggiuntive (opzionale)..."
+              oninput="updatePuntoField('${m.id}','${p.id}','note', this.value); updatePuntoSuggestions('note','${p.id}', this.value)"
+              onblur="learnPuntoFieldValue('note', this.value)">${escapeHtml(p.note)}</textarea>
+            <div class="sugg-row" id="sugg-note-${p.id}"></div>
           </div>
         </div>`).join('')}
       <button class="add-punto-btn" onclick="addPunto('${m.id}')">➕ Aggiungi punto ispezionato</button>
@@ -906,7 +1211,7 @@ async function exportExcel() {
 
   const cliente = document.getElementById('meta-cliente').value || '';
   const sito = document.getElementById('meta-sito').value || '';
-  const tipoIspezione = document.getElementById('meta-tipo-ispezione').value || '';
+  const tipoIspezione = getTipoIspezioneValue();
   const dataVal = document.getElementById('meta-data').value || '';
   const dataFmt = formatDate(dataVal);
   const ispettore = document.getElementById('meta-ispettore').value || '';
@@ -984,8 +1289,8 @@ async function exportExcel() {
     pushRow(ctx, [
       { col: 0, style: 4, text: 'N° Progr.\nPunto Ispezionato' },
       { col: 1, style: 4, text: 'Fotografia Punto Ispezionato' },
-      { col: 2, style: 4, text: 'NC rilevata' },
-      { col: 3, style: 4, text: 'Soluzione Tecnica' },
+      { col: 2, style: 4, text: 'NC rilevata / Osservazione' },
+      { col: 3, style: 4, text: 'Soluzione Tecnica Suggerita' },
       { col: 4, style: 4, text: 'Note' },
     ], 40);
 
@@ -1454,7 +1759,7 @@ async function exportReport() {
 function buildPrintHtml() {
   const cliente = document.getElementById('meta-cliente').value || '';
   const sito = document.getElementById('meta-sito').value || '';
-  const tipoIspezione = document.getElementById('meta-tipo-ispezione').value || '';
+  const tipoIspezione = getTipoIspezioneValue();
   const ispettore = document.getElementById('meta-ispettore').value || '';
   const dataFmt = formatDate(document.getElementById('meta-data').value || '');
   const revisione = document.getElementById('meta-revisione').value || '';
@@ -1486,7 +1791,7 @@ function buildPrintHtml() {
     h += `<tr><td style="padding:3px 6px;border:1px solid #ddd;background:#fff9d6;">${escapeHtml(m.reparto)}</td><td style="padding:3px 6px;border:1px solid #ddd;background:#fff9d6;">${escapeHtml(m.nomeMacchina)}</td><td style="padding:3px 6px;border:1px solid #ddd;background:#fff9d6;">${escapeHtml(m.codiceMacchina)}</td></tr>`;
     h += `</table>`;
     h += `<table style="width:100%;border-collapse:collapse;font-size:10px;">`;
-    h += `<tr>${['N°','Fotografia','NC rilevata','Soluzione Tecnica','Note'].map(t => `<th style="padding:4px;border:1px solid #ddd;background:#f2f4f7;">${t}</th>`).join('')}</tr>`;
+    h += `<tr>${['N°','Fotografia','NC rilevata / Osservazione','Soluzione Tecnica Suggerita','Note'].map(t => `<th style="padding:4px;border:1px solid #ddd;background:#f2f4f7;">${t}</th>`).join('')}</tr>`;
     m.punti.forEach((p, idx) => {
       h += `<tr>` +
         `<td style="padding:4px;border:1px solid #ddd;text-align:center;">${idx + 1}</td>` +
@@ -1531,7 +1836,7 @@ async function exportDocx() {
 
   const cliente = document.getElementById('meta-cliente').value || '';
   const sito = document.getElementById('meta-sito').value || '';
-  const tipoIspezione = document.getElementById('meta-tipo-ispezione').value || '';
+  const tipoIspezione = getTipoIspezioneValue();
   const ispettore = document.getElementById('meta-ispettore').value || '';
   const dataFmt = formatDate(document.getElementById('meta-data').value || '');
   const revisione = document.getElementById('meta-revisione').value || '';
@@ -1678,8 +1983,8 @@ async function exportDocx() {
     m.punti.forEach((p, idx) => {
       bodyXml += heading('Punto ' + (idx + 1), { size: 24, color: '2E75B6' });
       (p.fotos || []).forEach(ph => { bodyXml += imageParagraph(ph.src, ph.width, ph.height); });
-      bodyXml += richParagraph([{ text: 'NC rilevata: ', bold: true }, { text: p.ncRilevata || '' }]);
-      bodyXml += richParagraph([{ text: 'Soluzione Tecnica: ', bold: true }, { text: p.soluzioneTecnica || '' }]);
+      bodyXml += richParagraph([{ text: 'NC rilevata / Osservazione: ', bold: true }, { text: p.ncRilevata || '' }]);
+      bodyXml += richParagraph([{ text: 'Soluzione Tecnica Suggerita: ', bold: true }, { text: p.soluzioneTecnica || '' }]);
       if ((p.note || '').trim()) bodyXml += richParagraph([{ text: 'Note: ', bold: true }, { text: p.note }]);
     });
   });
@@ -1761,7 +2066,11 @@ handleDropboxRedirect();
 <div id="print-area"></div>
 <div id="photo-lightbox" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()">✕</button>
-  <img id="lightbox-img" src="">
+  <div class="lightbox-controls" onclick="event.stopPropagation()">
+    <button onclick="rotateLightboxPhoto(-90)">⟲ Ruota sinistra</button>
+    <button onclick="rotateLightboxPhoto(90)">⟳ Ruota destra</button>
+  </div>
+  <img id="lightbox-img" src="" onclick="event.stopPropagation()">
 </div>
 <datalist id="list-reparti"></datalist>
 <datalist id="list-macchine"></datalist>
