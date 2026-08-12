@@ -53,6 +53,13 @@
   .loto-entry { background:#fff; border-radius:6px; padding:8px; margin-bottom:8px; border:1px solid var(--border); }
   .loto-entry-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:13px; }
   .loto-field-label { display:block; font-size:12px; color:#667; margin-bottom:3px; font-weight:bold; }
+  .loto-interventi-block { margin-top:6px; }
+  .loto-intervento { background:#fffdf5; border:1px dashed #f0d999; border-radius:8px; padding:10px; margin-bottom:10px; }
+  .loto-intervento textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:15px; font-family:inherit; margin-bottom:8px; resize:vertical; }
+  .loto-blocco { background:#fff; border:1px solid var(--border); border-radius:6px; padding:8px; margin-bottom:8px; }
+  .loto-blocco-label { font-weight:bold; color:var(--blue-dark); font-size:13px; margin-bottom:6px; }
+  .loto-blocco input, .loto-blocco select { width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:15px; font-family:inherit; margin-bottom:6px; }
+  .loto-blocco-row.two-col { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .loto-entry input, .loto-entry textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:15px; font-family:inherit; margin-bottom:6px; resize:vertical; }
   .add-punto-btn { width:100%; padding:11px; border-radius:8px; border:1px dashed var(--blue-med); background:#fff; color:var(--blue-med); font-weight:bold; font-size:14px; cursor:pointer; }
   .add-machine-btn { width:100%; padding:14px; border-radius:10px; border:2px dashed var(--blue-dark); background:#fff; color:var(--blue-dark); font-weight:bold; font-size:16px; cursor:pointer; margin-bottom:20px; }
@@ -92,7 +99,7 @@
 <header>
   <h1>📋 Ispezione</h1>
   <div class="sub">Report di Ispezione</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.10</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.11</div>
 </header>
 
 <div class="meta">
@@ -772,7 +779,7 @@ const LOTO_ISTRUZIONI_DEFAULT = [
 function defaultLotoData() {
   const selected = {}, energie = {};
   LOTO_ENERGIE.forEach(([key]) => { selected[key] = false; energie[key] = []; });
-  return { selected, energie, istruzioni: LOTO_ISTRUZIONI_DEFAULT };
+  return { selected, energie, istruzioni: LOTO_ISTRUZIONI_DEFAULT, interventi: [] };
 }
 
 function toggleLotoEnergia(macchinaId, key, checked) {
@@ -881,6 +888,87 @@ function harvestLotoTextIntoAnagrafiche() {
   return changed;
 }
 
+function getAllLotoEnergiaEntries(m) {
+  const list = [];
+  LOTO_ENERGIE.forEach(([key, label]) => {
+    if (!m.loto.selected[key]) return;
+    (m.loto.energie[key] || []).forEach((e, idx) => list.push({ id: e.id, label: label + ' ' + (idx + 1) }));
+  });
+  return list;
+}
+
+function addLotoIntervento(macchinaId) {
+  const m = macchine.find(x => x.id === macchinaId);
+  if (!m) return;
+  if (!m.loto) m.loto = defaultLotoData();
+  if (!m.loto.interventi) m.loto.interventi = [];
+  m.loto.interventi.push({ id: 'iv' + Date.now() + Math.random(), descrizione: '', blocchi: {} });
+  render();
+}
+
+function deleteLotoIntervento(macchinaId, interventoId) {
+  const m = macchine.find(x => x.id === macchinaId);
+  if (!m || !m.loto) return;
+  m.loto.interventi = (m.loto.interventi || []).filter(i => i.id !== interventoId);
+  render();
+}
+
+function updateLotoInterventoDescrizione(macchinaId, interventoId, value) {
+  const m = macchine.find(x => x.id === macchinaId);
+  const intv = m && m.loto && (m.loto.interventi || []).find(i => i.id === interventoId);
+  if (intv) intv.descrizione = value;
+}
+
+function updateLotoBlocco(macchinaId, interventoId, energiaEntryId, field, value) {
+  const m = macchine.find(x => x.id === macchinaId);
+  const intv = m && m.loto && (m.loto.interventi || []).find(i => i.id === interventoId);
+  if (!intv) return;
+  if (!intv.blocchi) intv.blocchi = {};
+  if (!intv.blocchi[energiaEntryId]) intv.blocchi[energiaEntryId] = {};
+  intv.blocchi[energiaEntryId][field] = value;
+}
+
+function renderLotoInterventiSection(m) {
+  if (!m.loto.interventi) m.loto.interventi = [];
+  const energiaEntries = getAllLotoEnergiaEntries(m);
+  let html = '<div class="loto-interventi-block"><div class="loto-energia-label">Energie da bloccare per tipo di intervento</div>';
+  if (!energiaEntries.length) {
+    html += '<div style="font-size:12px;color:#889;margin-bottom:8px;">Aggiungi prima almeno una energia qui sopra.</div></div>';
+    return html;
+  }
+  m.loto.interventi.forEach((intv, iidx) => {
+    html += `<div class="loto-intervento">
+      <div class="loto-entry-top"><b>Tipo di intervento ${iidx + 1}</b><button class="del-btn" style="font-size:14px" onclick="deleteLotoIntervento('${m.id}','${intv.id}')">✕</button></div>
+      <label class="loto-field-label">Descrizione Tipo di Intervento</label>
+      <textarea placeholder="Es. interventi vari sulle tubazioni e valvole della linea..." onchange="updateLotoInterventoDescrizione('${m.id}','${intv.id}', this.value)">${escapeHtml(intv.descrizione)}</textarea>`;
+    energiaEntries.forEach(ee => {
+      const b = (intv.blocchi && intv.blocchi[ee.id]) || {};
+      html += `<div class="loto-blocco">
+        <div class="loto-blocco-label">${escapeHtml(ee.label)}</div>
+        <label class="loto-field-label">Da disconnettere</label>
+        <select onchange="updateLotoBlocco('${m.id}','${intv.id}','${ee.id}','disconnettere', this.value)">
+          <option value="" ${!b.disconnettere ? 'selected' : ''}>—</option>
+          <option value="SI" ${b.disconnettere === 'SI' ? 'selected' : ''}>SI</option>
+          <option value="NO" ${b.disconnettere === 'NO' ? 'selected' : ''}>NO</option>
+        </select>
+        <label class="loto-field-label">Firma Resp. MTZ</label>
+        <input value="${escapeAttr(b.firmaResp)}" onchange="updateLotoBlocco('${m.id}','${intv.id}','${ee.id}','firmaResp', this.value)">
+        <div class="loto-blocco-row two-col">
+          <div><label class="loto-field-label">Data</label><input type="date" value="${escapeAttr(b.data)}" onchange="updateLotoBlocco('${m.id}','${intv.id}','${ee.id}','data', this.value)"></div>
+          <div><label class="loto-field-label">Ora</label><input type="time" value="${escapeAttr(b.ora)}" onchange="updateLotoBlocco('${m.id}','${intv.id}','${ee.id}','ora', this.value)"></div>
+        </div>
+        <label class="loto-field-label">Test</label>
+        <input value="${escapeAttr(b.test)}" onchange="updateLotoBlocco('${m.id}','${intv.id}','${ee.id}','test', this.value)">
+        <label class="loto-field-label">Firma</label>
+        <input value="${escapeAttr(b.firma)}" onchange="updateLotoBlocco('${m.id}','${intv.id}','${ee.id}','firma', this.value)">
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  html += `<button class="add-punto-btn" onclick="addLotoIntervento('${m.id}')">➕ Aggiungi tipo di intervento ${m.loto.interventi.length + 1}</button></div>`;
+  return html;
+}
+
 function renderLotoBlock(m) {
   if (!m.loto) m.loto = defaultLotoData();
   let html = '<div class="loto-block"><div class="loto-title">🔒 Energie da isolare (LOTO)</div>';
@@ -917,6 +1005,8 @@ function renderLotoBlock(m) {
     });
     html += `<button class="add-punto-btn" onclick="addLotoEnergiaEntry('${m.id}','${key}')">➕ Aggiungi ${escapeHtml(label)} ${entries.length + 1}</button></div>`;
   });
+
+  html += renderLotoInterventiSection(m);
 
   html += `<div class="field-block"><label>Istruzioni generali procedura LOTO</label>
     <textarea style="min-height:180px;" onchange="updateLotoIstruzioni('${m.id}', this.value)">${escapeHtml(m.loto.istruzioni)}</textarea></div>`;
@@ -1696,6 +1786,30 @@ async function exportExcel() {
             ], h);
           });
         });
+        if ((m.loto.interventi || []).length) {
+          const energiaEntries = getAllLotoEnergiaEntries(m);
+          pushRow(ctx, [{ col: 0, style: 0, text: '' }], 6);
+          pushRow(ctx, [{ col: 0, style: 1, text: 'ENERGIE DA BLOCCARE PER TIPO DI INTERVENTO' }]); mergeRange(ctx, `A${ctx.rowNum - 1}:E${ctx.rowNum - 1}`);
+          m.loto.interventi.forEach((intv, iidx) => {
+            pushRow(ctx, [{ col: 0, style: 4, text: 'Tipo di intervento ' + (iidx + 1) }]); mergeRange(ctx, `A${ctx.rowNum - 1}:E${ctx.rowNum - 1}`);
+            const rDesc = pushRow(ctx, [{ col: 0, style: 7, text: intv.descrizione || '' }], wrapHeight(intv.descrizione, 90, 24));
+            mergeRange(ctx, `A${rDesc}:E${rDesc}`);
+            pushRow(ctx, [
+              { col: 0, style: 4, text: 'Energia' }, { col: 1, style: 4, text: 'Da disconnettere' },
+              { col: 2, style: 4, text: 'Firma Resp. MTZ / Data-Ora' }, { col: 3, style: 4, text: 'Test' }, { col: 4, style: 4, text: 'Firma' },
+            ], 30);
+            energiaEntries.forEach(ee => {
+              const b = (intv.blocchi && intv.blocchi[ee.id]) || {};
+              pushRow(ctx, [
+                { col: 0, style: 7, text: ee.label },
+                { col: 1, style: 7, text: b.disconnettere || '' },
+                { col: 2, style: 7, text: (b.firmaResp || '') + (b.data || b.ora ? ' — ' + (b.data || '') + ' ' + (b.ora || '') : '') },
+                { col: 3, style: 7, text: b.test || '' },
+                { col: 4, style: 7, text: b.firma || '' },
+              ], 26);
+            });
+          });
+        }
         if ((m.loto.istruzioni || '').trim()) {
           pushRow(ctx, [{ col: 0, style: 0, text: '' }], 6);
           pushRow(ctx, [{ col: 0, style: 4, text: 'Istruzioni generali procedura LOTO' }]); mergeRange(ctx, `A${ctx.rowNum - 1}:E${ctx.rowNum - 1}`);
@@ -2213,6 +2327,29 @@ function buildPrintHtml() {
           });
         });
         h += `</table>`;
+        if ((m.loto.interventi || []).length) {
+          const energiaEntries = getAllLotoEnergiaEntries(m);
+          h += `<h2 style="color:#0263AC;font-size:14px;margin-top:16px;">Energie da bloccare per tipo di intervento</h2>`;
+          m.loto.interventi.forEach((intv, iidx) => {
+            h += `<div style="font-size:12px;font-weight:bold;margin-top:8px;">Tipo di intervento ${iidx + 1}</div>`;
+            if ((intv.descrizione || '').trim()) h += `<div style="font-size:11px;margin-bottom:6px;">${escapeHtml(intv.descrizione)}</div>`;
+            h += `<table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:8px;">`;
+            h += `<tr>${['Energia','Da disconnettere','Firma Resp. MTZ','Data','Ora','Test','Firma'].map(t => `<th style="padding:4px;border:1px solid #ddd;background:#f2f4f7;">${t}</th>`).join('')}</tr>`;
+            energiaEntries.forEach(ee => {
+              const b = (intv.blocchi && intv.blocchi[ee.id]) || {};
+              h += `<tr>` +
+                `<td style="padding:4px;border:1px solid #ddd;font-weight:bold;">${escapeHtml(ee.label)}</td>` +
+                `<td style="padding:4px;border:1px solid #ddd;text-align:center;">${escapeHtml(b.disconnettere)}</td>` +
+                `<td style="padding:4px;border:1px solid #ddd;">${escapeHtml(b.firmaResp)}</td>` +
+                `<td style="padding:4px;border:1px solid #ddd;">${escapeHtml(b.data)}</td>` +
+                `<td style="padding:4px;border:1px solid #ddd;">${escapeHtml(b.ora)}</td>` +
+                `<td style="padding:4px;border:1px solid #ddd;">${escapeHtml(b.test)}</td>` +
+                `<td style="padding:4px;border:1px solid #ddd;">${escapeHtml(b.firma)}</td>` +
+                `</tr>`;
+            });
+            h += `</table>`;
+          });
+        }
         if ((m.loto.istruzioni || '').trim()) {
           h += `<div style="font-size:11px;margin-top:10px;"><b>Istruzioni generali procedura LOTO</b><br>${escapeHtml(m.loto.istruzioni).replace(/\n/g, '<br>')}</div>`;
         }
@@ -2289,9 +2426,10 @@ async function exportDocx() {
       `<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`;
   }
   function richParagraph(runs, opts = {}) {
+    const sz = opts.size || 21;
     const runsXml = runs.map(r => {
       const bold = r.bold ? '<w:b/>' : '';
-      return `<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/>${bold}<w:sz w:val="21"/><w:szCs w:val="21"/></w:rPr><w:t xml:space="preserve">${escapeXml(r.text)}</w:t></w:r>`;
+      return `<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/>${bold}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/></w:rPr><w:t xml:space="preserve">${escapeXml(r.text)}</w:t></w:r>`;
     }).join('');
     return `<w:p><w:pPr><w:spacing w:after="${opts.after != null ? opts.after : 120}"/></w:pPr>${runsXml}</w:p>`;
   }
@@ -2417,6 +2555,21 @@ async function exportDocx() {
             bodyXml += richParagraph([{ text: 'Modalità di isolamento e blocco: ', bold: true }, { text: e.isolamento || '' }]);
           });
         });
+        if ((m.loto.interventi || []).length) {
+          const energiaEntries = getAllLotoEnergiaEntries(m);
+          bodyXml += heading('Energie da bloccare per tipo di intervento', { size: 26, color: '2E75B6' });
+          m.loto.interventi.forEach((intv, iidx) => {
+            bodyXml += paragraph('Tipo di intervento ' + (iidx + 1), { bold: true, size: 22 });
+            if ((intv.descrizione || '').trim()) bodyXml += paragraph(intv.descrizione, { size: 18 });
+            energiaEntries.forEach(ee => {
+              const b = (intv.blocchi && intv.blocchi[ee.id]) || {};
+              bodyXml += richParagraph([
+                { text: ee.label + ' — ', bold: true },
+                { text: 'Da disconnettere: ' + (b.disconnettere || '—') + '  ·  Firma Resp. MTZ: ' + (b.firmaResp || '—') + '  ·  Data/Ora: ' + (b.data || '—') + ' ' + (b.ora || '') + '  ·  Test: ' + (b.test || '—') + '  ·  Firma: ' + (b.firma || '—') },
+              ], { size: 16 });
+            });
+          });
+        }
         if ((m.loto.istruzioni || '').trim()) {
           bodyXml += paragraph('Istruzioni generali procedura LOTO', { bold: true, size: 22 });
           m.loto.istruzioni.split('\n').forEach(line => { bodyXml += paragraph(line || ' ', { size: 18 }); });
