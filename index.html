@@ -43,6 +43,16 @@
   .field-block textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:9px; font-size:16px; font-family:inherit; resize:vertical; min-height:48px; }
   .sugg-row { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
   .sugg-row .chip { background:#eef2f7; border:1px solid var(--border); border-radius:14px; padding:5px 10px; font-size:12px; color:#334; cursor:pointer; }
+  .loto-block { background:#fff7e6; border:1px solid #f0d999; border-radius:8px; padding:12px; margin-bottom:12px; }
+  .loto-title { font-weight:bold; color:#8a6d1a; font-size:15px; margin-bottom:8px; }
+  .loto-checks { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:8px; }
+  .loto-check { display:flex; align-items:center; gap:5px; font-size:14px; background:#fff; border:1px solid #f0d999; border-radius:6px; padding:6px 10px; }
+  .loto-check input { width:auto; margin:0; }
+  .loto-energia-group { background:#fffdf5; border:1px dashed #f0d999; border-radius:8px; padding:10px; margin-bottom:10px; }
+  .loto-energia-label { font-weight:bold; color:#8a6d1a; margin-bottom:6px; }
+  .loto-entry { background:#fff; border-radius:6px; padding:8px; margin-bottom:8px; border:1px solid var(--border); }
+  .loto-entry-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:13px; }
+  .loto-entry input, .loto-entry textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:15px; font-family:inherit; margin-bottom:6px; resize:vertical; }
   .add-punto-btn { width:100%; padding:11px; border-radius:8px; border:1px dashed var(--blue-med); background:#fff; color:var(--blue-med); font-weight:bold; font-size:14px; cursor:pointer; }
   .add-machine-btn { width:100%; padding:14px; border-radius:10px; border:2px dashed var(--blue-dark); background:#fff; color:var(--blue-dark); font-weight:bold; font-size:16px; cursor:pointer; margin-bottom:20px; }
   .fab-bar { background:#fff; border-top:1px solid var(--border); border-radius:10px; margin:12px; padding:14px 12px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
@@ -81,7 +91,7 @@
 <header>
   <h1>📋 Ispezione</h1>
   <div class="sub">Report di Ispezione</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.6</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.9</div>
 </header>
 
 <div class="meta">
@@ -91,7 +101,7 @@
   <label>Sito</label>
   <input id="meta-sito" placeholder="es. Stabilimento Nord">
   <label>Tipo di ispezione</label>
-  <select id="meta-tipo-ispezione" onchange="toggleTipoIspezioneAltro()" style="width:100%; padding:9px 10px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; font-size:16px; font-family:inherit;">
+  <select id="meta-tipo-ispezione" onchange="toggleTipoIspezioneAltro(); render();" style="width:100%; padding:9px 10px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; font-size:16px; font-family:inherit;">
     <option value="ATEX">ATEX</option>
     <option value="Machine Guarding">Machine Guarding</option>
     <option value="Direttiva Macchine 2006/42/CE">Direttiva Macchine 2006/42/CE</option>
@@ -195,6 +205,13 @@
     <input type="file" id="import-foto-input" accept="image/*" multiple onchange="handleImportFotoPunti(event)">
   </div>
   <div style="font-size:11px; color:#667; margin-top:6px;">Ti chiede Reparto e Macchina, poi scegli tutte le foto di quella cartella: ogni foto diventa un punto ispezionato separato (NC/Soluzione/Note da compilare dopo).</div>
+
+  <div class="section-title">Definizioni ricorrenti (NC, Soluzioni, Note, campi LOTO)</div>
+  <div class="draft-bar" style="margin:8px 0 0;">
+    <button class="draft-btn file" onclick="triggerImportDefinizioni()">📥 Importa definizioni (XLSX)</button>
+    <input type="file" id="definizioni-xlsx-input" accept=".xlsx,.xls" onchange="handleImportDefinizioni(event)">
+  </div>
+  <div style="font-size:11px; color:#667; margin-top:6px;">Carica in blocco un elenco di testi già noti (NC frequenti, soluzioni standard, ecc.) nei suggerimenti, invece di scriverli una volta a mano ciascuno. Il file deve avere una riga di intestazione con colonne tipo: <b>NC</b>, <b>Soluzione</b>, <b>Note</b>, <b>Descrizione</b> (energia LOTO), <b>Spegnimento</b>, <b>Isolamento</b> — anche solo alcune, in qualsiasi ordine. Ogni riga sotto l'intestazione, in ogni colonna riconosciuta, diventa un suggerimento disponibile.</div>
 </details>
 
 <div class="draft-bar">
@@ -466,6 +483,7 @@ function autosaveToLocalStorage() {
 async function runAutosave() {
   if (!macchine.length) return; // niente da salvare ancora
   harvestPuntoTextIntoAnagrafiche();
+  harvestLotoTextIntoAnagrafiche();
   const localOk = autosaveToLocalStorage();
   let dbxOk = false;
   if (isDropboxConnected()) {
@@ -487,6 +505,7 @@ function recoverLocalAutosave() {
     macchine = migrateMacchine(data.macchine || []);
     macchinaCounter = data.macchinaCounter || macchine.length;
     harvestPuntoTextIntoAnagrafiche();
+  harvestLotoTextIntoAnagrafiche();
     render();
     const when = data.savedAt ? new Date(data.savedAt).toLocaleString('it-IT') : '—';
     showDraftStatus('↩️ Recuperato salvataggio automatico del ' + when);
@@ -544,6 +563,7 @@ function handleLoadDraftFile(event) {
       macchine = migrateMacchine(data.macchine || []);
       macchinaCounter = data.macchinaCounter || macchine.length;
       harvestPuntoTextIntoAnagrafiche();
+  harvestLotoTextIntoAnagrafiche();
       render();
       showDraftStatus('📂 Bozza caricata dal file.');
     } catch (err) {
@@ -562,7 +582,7 @@ function addMacchina() {
 function deleteMacchina(id) { macchine = macchine.filter(m => m.id !== id); render(); }
 
 const FIELD_TO_LIST = { reparto: 'reparti', nomeMacchina: 'macchine', codiceMacchina: 'codici' };
-let anagrafiche = { reparti: [], macchine: [], codici: [], nc: [], soluzioni: [], note: [] };
+let anagrafiche = { reparti: [], macchine: [], codici: [], nc: [], soluzioni: [], note: [], lotoDescrizione: [], lotoSpegnimento: [], lotoIsolamento: [] };
 let machineRegistry = []; // [{ codice, macchina, reparto }] importato da XLS
 
 function renderDatalists() {
@@ -584,7 +604,7 @@ function loadAnagrafiche() {
     if (raw) {
       const data = JSON.parse(raw);
       const loaded = data.anagrafiche || data; // retrocompatibile con formato precedente
-      anagrafiche = Object.assign({ reparti: [], macchine: [], codici: [], nc: [], soluzioni: [], note: [] }, loaded);
+      anagrafiche = Object.assign({ reparti: [], macchine: [], codici: [], nc: [], soluzioni: [], note: [], lotoDescrizione: [], lotoSpegnimento: [], lotoIsolamento: [] }, loaded);
       machineRegistry = data.machineRegistry || [];
     }
   } catch (e) { /* nessuna lista salvata ancora, o localStorage non disponibile */ }
@@ -673,7 +693,9 @@ function harvestPuntoTextIntoAnagrafiche() {
 }
 
 function harvestPuntoTextIntoAnagraficheManual() {
-  const changed = harvestPuntoTextIntoAnagrafiche();
+  const changed1 = harvestPuntoTextIntoAnagrafiche();
+  const changed2 = harvestLotoTextIntoAnagrafiche();
+  const changed = changed1 || changed2;
   showDraftStatus(changed ? '🔄 Suggerimenti aggiornati da questo report.' : 'Niente di nuovo da aggiungere ai suggerimenti.');
 }
 
@@ -718,6 +740,184 @@ function applyMacchinaSuggestion(field, macchinaId, btn) {
   const val = btn.getAttribute('data-val');
   updateMacchinaField(macchinaId, field, val);
   render();
+}
+
+// ===== LOTO (LockOut-TagOut) =====
+const LOTO_ENERGIE = [
+  ['chimica', 'Chimica'], ['elettrica', 'Elettrica'], ['idraulica', 'Idraulica'],
+  ['pneumatica', 'Pneumatica'], ['meccanica', 'Meccanica'], ['altra', 'Altra'],
+];
+
+const LOTO_ISTRUZIONI_DEFAULT = [
+  'MESSA FUORI SERVIZIO E AVVIO LAVORI',
+  "1. L'esecutore del blocco notifica il supervisore di area, il quale informa tutto il personale coinvolto.",
+  '2. Per ciascuna energia da disconnettere, esegue i seguenti passaggi e compila la relativa casellina (data, ora, esito test e firma):',
+  '   2.1 Spegnimento normali comandi macchina (posizionamento su OFF o ARRESTO) e azzeramento energie accumulate',
+  '   2.2 Isolamento delle fonti di energia',
+  '   2.3 Blocco delle fonti di energia applicando un lucchetto al dispositivo di isolamento',
+  "   2.4 Verifica dell'avvenuto isolamento: prova di riavvio, tester per verifica assenza tensione, etc.",
+  '   2.5 Spegnimento dei normali comandi macchina',
+  "3. Il coordinatore della LOTO di gruppo firma a conferma dell'avvenuto coordinamento e completamento delle attività di Isolamento e Blocco Energie (Lock Out).",
+  '4. Esecuzione del lavoro — tutte le persone che intervengono sull\'attrezzatura devono apporre il proprio lucchetto sul dispositivo di blocco dell\'energia (es. LOTO Box, ganascia, etc.).',
+  '',
+  'RIMESSA IN SERVIZIO E FINE LAVORI',
+  "1. L'esecutore del blocco e gli esecutori del lavoro ispezionano l'attrezzatura per assicurare la corretta reinstallazione di tutti i componenti, rimozione degli attrezzi, ripristino delle protezioni, pulizia e assenza di residui.",
+  "2. L'esecutore del blocco notifica il supervisore di area prima della rimozione dei blocchi; il supervisore informa tutto il personale coinvolto.",
+  "3. L'esecutore del blocco rimuove i lucchetti e i dispositivi di blocco seguendo a ritroso i passaggi eseguiti per l'isolamento e blocco.",
+  '4. Il coordinatore della LOTO di gruppo firma a conferma del completamento di tutti i passaggi da eseguire prima del riavvio.',
+  "5. L'esecutore del blocco riavvia l'attrezzatura.",
+].join('\n');
+
+function defaultLotoData() {
+  const selected = {}, energie = {};
+  LOTO_ENERGIE.forEach(([key]) => { selected[key] = false; energie[key] = []; });
+  return { selected, energie, istruzioni: LOTO_ISTRUZIONI_DEFAULT };
+}
+
+function toggleLotoEnergia(macchinaId, key, checked) {
+  const m = macchine.find(x => x.id === macchinaId);
+  if (!m) return;
+  if (!m.loto) m.loto = defaultLotoData();
+  m.loto.selected[key] = checked;
+  render();
+}
+
+function addLotoEnergiaEntry(macchinaId, key) {
+  const m = macchine.find(x => x.id === macchinaId);
+  if (!m) return;
+  if (!m.loto) m.loto = defaultLotoData();
+  if (!m.loto.energie[key]) m.loto.energie[key] = [];
+  m.loto.energie[key].push({ id: 'lo' + Date.now() + Math.random(), descrizione: '', spegnimento: '', isolamento: '' });
+  render();
+}
+
+function deleteLotoEntry(macchinaId, key, entryId) {
+  const m = macchine.find(x => x.id === macchinaId);
+  if (!m || !m.loto) return;
+  m.loto.energie[key] = (m.loto.energie[key] || []).filter(e => e.id !== entryId);
+  render();
+}
+
+function updateLotoEntryField(macchinaId, key, entryId, field, value) {
+  const m = macchine.find(x => x.id === macchinaId);
+  if (!m || !m.loto) return;
+  const entry = (m.loto.energie[key] || []).find(e => e.id === entryId);
+  if (entry) entry[field] = value;
+}
+
+function updateLotoIstruzioni(macchinaId, value) {
+  const m = macchine.find(x => x.id === macchinaId);
+  if (!m) return;
+  if (!m.loto) m.loto = defaultLotoData();
+  m.loto.istruzioni = value;
+}
+
+const LOTO_FIELD_TO_LIST = { descrizione: 'lotoDescrizione', spegnimento: 'lotoSpegnimento', isolamento: 'lotoIsolamento' };
+
+function findLotoEntry(entryId) {
+  for (const m of macchine) {
+    if (!m.loto) continue;
+    for (const [key] of LOTO_ENERGIE) {
+      const entry = (m.loto.energie[key] || []).find(e => e.id === entryId);
+      if (entry) return { m, key, entry };
+    }
+  }
+  return null;
+}
+
+function updateLotoSuggestions(field, entryId, query) {
+  const listKey = LOTO_FIELD_TO_LIST[field];
+  const box = document.getElementById('sugg-loto-' + field + '-' + entryId);
+  if (!box || !listKey) return;
+  const list = anagrafiche[listKey] || [];
+  if (!list.length) { box.innerHTML = ''; return; }
+  const q = (query || '').toLowerCase().trim();
+  let items;
+  if (q.length < 2) {
+    items = list.slice(-8).reverse();
+  } else {
+    items = list.filter(v => v.toLowerCase().includes(q) && v.toLowerCase() !== q).slice(0, 8);
+  }
+  box.innerHTML = items.map(v =>
+    `<button type="button" class="chip" onclick="applyLotoSuggestion('${field}','${entryId}', this)" data-val="${escapeAttr(v)}">${escapeHtml(v.length > 60 ? v.slice(0, 60) + '…' : v)}</button>`
+  ).join('');
+}
+
+function applyLotoSuggestion(field, entryId, btn) {
+  const val = btn.getAttribute('data-val');
+  const found = findLotoEntry(entryId);
+  if (found) { found.entry[field] = val; render(); }
+}
+
+function learnLotoFieldValue(field, value) {
+  const listKey = LOTO_FIELD_TO_LIST[field];
+  if (!listKey || !value || !value.trim()) return;
+  const v = value.trim();
+  const list = anagrafiche[listKey] || (anagrafiche[listKey] = []);
+  if (!list.some(x => x.toLowerCase() === v.toLowerCase())) {
+    list.push(v);
+    saveAnagrafiche();
+  }
+}
+
+function harvestLotoTextIntoAnagrafiche() {
+  let changed = false;
+  (macchine || []).forEach(m => {
+    if (!m.loto) return;
+    LOTO_ENERGIE.forEach(([key]) => {
+      (m.loto.energie[key] || []).forEach(e => {
+        ['descrizione', 'spegnimento', 'isolamento'].forEach(field => {
+          const listKey = LOTO_FIELD_TO_LIST[field];
+          const v = (e[field] || '').trim();
+          if (!v) return;
+          const list = anagrafiche[listKey] || (anagrafiche[listKey] = []);
+          if (!list.some(x => x.toLowerCase() === v.toLowerCase())) { list.push(v); changed = true; }
+        });
+      });
+    });
+  });
+  if (changed) saveAnagrafiche();
+  return changed;
+}
+
+function renderLotoBlock(m) {
+  if (!m.loto) m.loto = defaultLotoData();
+  let html = '<div class="loto-block"><div class="loto-title">🔒 Energie da isolare (LOTO)</div>';
+  html += '<div class="loto-checks">' + LOTO_ENERGIE.map(([key, label]) =>
+    `<label class="loto-check"><input type="checkbox" ${m.loto.selected[key] ? 'checked' : ''} onchange="toggleLotoEnergia('${m.id}','${key}', this.checked)"> ${label}</label>`
+  ).join('') + '</div>';
+
+  LOTO_ENERGIE.forEach(([key, label]) => {
+    if (!m.loto.selected[key]) return;
+    const entries = m.loto.energie[key] || [];
+    html += `<div class="loto-energia-group"><div class="loto-energia-label">${label}</div>`;
+    entries.forEach((e, idx) => {
+      html += `<div class="loto-entry">
+        <div class="loto-entry-top"><b>${escapeHtml(label)} ${idx + 1}</b><button class="del-btn" style="font-size:14px" onclick="deleteLotoEntry('${m.id}','${key}','${e.id}')">✕</button></div>
+        <input placeholder="Descrizione energia" value="${escapeAttr(e.descrizione)}"
+          onfocus="updateLotoSuggestions('descrizione','${e.id}', this.value)"
+          oninput="updateLotoEntryField('${m.id}','${key}','${e.id}','descrizione', this.value); updateLotoSuggestions('descrizione','${e.id}', this.value)"
+          onblur="learnLotoFieldValue('descrizione', this.value)">
+        <div class="sugg-row" id="sugg-loto-descrizione-${e.id}"></div>
+        <textarea placeholder="Modalità di spegnimento (procedura normale)"
+          onfocus="updateLotoSuggestions('spegnimento','${e.id}', this.value)"
+          oninput="updateLotoEntryField('${m.id}','${key}','${e.id}','spegnimento', this.value); updateLotoSuggestions('spegnimento','${e.id}', this.value)"
+          onblur="learnLotoFieldValue('spegnimento', this.value)">${escapeHtml(e.spegnimento)}</textarea>
+        <div class="sugg-row" id="sugg-loto-spegnimento-${e.id}"></div>
+        <textarea placeholder="Modalità di isolamento e blocco"
+          onfocus="updateLotoSuggestions('isolamento','${e.id}', this.value)"
+          oninput="updateLotoEntryField('${m.id}','${key}','${e.id}','isolamento', this.value); updateLotoSuggestions('isolamento','${e.id}', this.value)"
+          onblur="learnLotoFieldValue('isolamento', this.value)">${escapeHtml(e.isolamento)}</textarea>
+        <div class="sugg-row" id="sugg-loto-isolamento-${e.id}"></div>
+      </div>`;
+    });
+    html += `<button class="add-punto-btn" onclick="addLotoEnergiaEntry('${m.id}','${key}')">➕ Aggiungi ${escapeHtml(label)} ${entries.length + 1}</button></div>`;
+  });
+
+  html += `<div class="field-block"><label>Istruzioni generali procedura LOTO</label>
+    <textarea style="min-height:180px;" onchange="updateLotoIstruzioni('${m.id}', this.value)">${escapeHtml(m.loto.istruzioni)}</textarea></div>`;
+  html += '</div>';
+  return html;
 }
 
 function triggerMachineRegistryImport() {
@@ -869,6 +1069,74 @@ function handleImportIspezioneXlsx(event) {
       if (!dataIspezione && !ispettore && macchineTrovate === 0) {
         alert('Non ho trovato campi riconoscibili (Data ispezione, Ispettore, Reparto, Macchina) in questo file. Verifica che le etichette nel foglio corrispondano a quelle usate dall\'app.');
       }
+    } catch (err) {
+      alert('Non sono riuscito a leggere il file: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+// ===== Import definizioni ricorrenti (NC, Soluzioni, Note, campi LOTO) =====
+function findColumnIndex(header, candidates) {
+  for (const cand of candidates) {
+    const idx = header.findIndex(h => h === cand);
+    if (idx >= 0) return idx;
+  }
+  for (const cand of candidates) {
+    const idx = header.findIndex(h => h.includes(cand));
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+function triggerImportDefinizioni() {
+  document.getElementById('definizioni-xlsx-input').click();
+}
+
+function handleImportDefinizioni(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { alert('Libreria di lettura XLS non caricata. Controlla la connessione e riprova.'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      if (!rows.length) throw new Error('vuoto');
+      const header = rows[0].map(h => String(h).toLowerCase().trim());
+
+      const colMap = {
+        nc: findColumnIndex(header, ['nc rilevata / osservazione', 'nc rilevata', 'osservazione', 'nc']),
+        soluzioni: findColumnIndex(header, ['soluzione tecnica suggerita', 'soluzione tecnica', 'soluzione', 'soluzioni']),
+        note: findColumnIndex(header, ['note']),
+        lotoDescrizione: findColumnIndex(header, ['descrizione energia', 'descrizione']),
+        lotoSpegnimento: findColumnIndex(header, ['modalità di spegnimento', 'spegnimento']),
+        lotoIsolamento: findColumnIndex(header, ['modalità di isolamento e blocco', 'modalità di isolamento', 'isolamento']),
+      };
+
+      const dataRows = rows.slice(1);
+      let totalAdded = 0;
+      Object.keys(colMap).forEach(listKey => {
+        const idx = colMap[listKey];
+        if (idx < 0) return;
+        const list = anagrafiche[listKey] || (anagrafiche[listKey] = []);
+        dataRows.forEach(r => {
+          const v = String(r[idx] == null ? '' : r[idx]).trim();
+          if (!v) return;
+          if (!list.some(x => x.toLowerCase() === v.toLowerCase())) { list.push(v); totalAdded++; }
+        });
+      });
+
+      if (totalAdded === 0) {
+        alert('Non ho trovato colonne riconoscibili (NC, Soluzione, Note, Descrizione, Spegnimento, Isolamento) o i valori erano già tutti presenti.');
+        return;
+      }
+      renderDatalists();
+      saveAnagrafiche();
+      showDraftStatus('📥 Importate ' + totalAdded + ' definizioni nei suggerimenti.');
     } catch (err) {
       alert('Non sono riuscito a leggere il file: ' + err.message);
     }
@@ -1168,6 +1436,7 @@ function render() {
         </div>
         <button class="del-btn" onclick="deleteMacchina('${m.id}')">✕</button>
       </div>
+      ${getTipoIspezioneValue() === 'LockOut-TagOut' ? renderLotoBlock(m) : ''}
       ${m.punti.map((p, idx) => `
         <div class="punto-card">
           <div class="punto-top"><span>Punto ${idx + 1}</span>
@@ -1401,6 +1670,36 @@ async function exportExcel() {
         addImageToRow(ctx, mediaFiles, fotos[i].src, 1, r2);
       }
     });
+
+    if (getTipoIspezioneValue() === 'LockOut-TagOut' && m.loto) {
+      const haEnergie = LOTO_ENERGIE.some(([key]) => m.loto.selected[key] && (m.loto.energie[key] || []).length);
+      if (haEnergie) {
+        pushRow(ctx, [{ col: 0, style: 0, text: '' }], 10);
+        pushRow(ctx, [{ col: 0, style: 1, text: 'ENERGIE DA ISOLARE (LOTO)' }]); mergeRange(ctx, `A${ctx.rowNum - 1}:E${ctx.rowNum - 1}`);
+        pushRow(ctx, [
+          { col: 0, style: 4, text: 'Energia' }, { col: 1, style: 4, text: 'Descrizione' },
+          { col: 2, style: 4, text: 'Modalità di spegnimento' }, { col: 3, style: 4, text: 'Modalità di isolamento e blocco' },
+        ], 30);
+        LOTO_ENERGIE.forEach(([key, label]) => {
+          if (!m.loto.selected[key]) return;
+          (m.loto.energie[key] || []).forEach((e, idx) => {
+            const h = Math.max(wrapHeight(e.descrizione, 30, 0), wrapHeight(e.spegnimento, 30, 0), wrapHeight(e.isolamento, 30, 0), 30);
+            pushRow(ctx, [
+              { col: 0, style: 7, text: label + ' ' + (idx + 1) },
+              { col: 1, style: 7, text: e.descrizione || '' },
+              { col: 2, style: 7, text: e.spegnimento || '' },
+              { col: 3, style: 7, text: e.isolamento || '' },
+            ], h);
+          });
+        });
+        if ((m.loto.istruzioni || '').trim()) {
+          pushRow(ctx, [{ col: 0, style: 0, text: '' }], 6);
+          pushRow(ctx, [{ col: 0, style: 4, text: 'Istruzioni generali procedura LOTO' }]); mergeRange(ctx, `A${ctx.rowNum - 1}:E${ctx.rowNum - 1}`);
+          const rIstr = pushRow(ctx, [{ col: 0, style: 7, text: m.loto.istruzioni }], wrapHeight(m.loto.istruzioni, 90, 60));
+          mergeRange(ctx, `A${rIstr}:E${rIstr}`);
+        }
+      }
+    }
 
     sheetDefs.push({ name: sanitizeSheetName(m.nomeMacchina, usedNames), ctx, dimensionCols: 'E', colWidths: [22,36,34,36,26] });
   });
@@ -1771,6 +2070,7 @@ async function loadSelectedDraftFromDropbox() {
     macchine = migrateMacchine(data.macchine || []);
     macchinaCounter = data.macchinaCounter || macchine.length;
     harvestPuntoTextIntoAnagrafiche();
+  harvestLotoTextIntoAnagrafiche();
     render();
     showDraftStatus('☁️ Bozza caricata: ' + name);
   } catch (e) {
@@ -1890,6 +2190,30 @@ function buildPrintHtml() {
         `</tr>`;
     });
     h += `</table>`;
+
+    if (getTipoIspezioneValue() === 'LockOut-TagOut' && m.loto) {
+      const haEnergie = LOTO_ENERGIE.some(([key]) => m.loto.selected[key] && (m.loto.energie[key] || []).length);
+      if (haEnergie) {
+        h += `<h2 style="color:#0263AC;font-size:14px;margin-top:16px;">Energie da isolare (LOTO)</h2>`;
+        h += `<table style="width:100%;border-collapse:collapse;font-size:10px;">`;
+        h += `<tr>${['Energia','Descrizione','Modalità di spegnimento','Modalità di isolamento e blocco'].map(t => `<th style="padding:4px;border:1px solid #ddd;background:#f2f4f7;">${t}</th>`).join('')}</tr>`;
+        LOTO_ENERGIE.forEach(([key, label]) => {
+          if (!m.loto.selected[key]) return;
+          (m.loto.energie[key] || []).forEach((e, idx) => {
+            h += `<tr>` +
+              `<td style="padding:4px;border:1px solid #ddd;font-weight:bold;">${escapeHtml(label)} ${idx + 1}</td>` +
+              `<td style="padding:4px;border:1px solid #ddd;white-space:pre-wrap;">${escapeHtml(e.descrizione)}</td>` +
+              `<td style="padding:4px;border:1px solid #ddd;white-space:pre-wrap;">${escapeHtml(e.spegnimento)}</td>` +
+              `<td style="padding:4px;border:1px solid #ddd;white-space:pre-wrap;">${escapeHtml(e.isolamento)}</td>` +
+              `</tr>`;
+          });
+        });
+        h += `</table>`;
+        if ((m.loto.istruzioni || '').trim()) {
+          h += `<div style="font-size:11px;margin-top:10px;"><b>Istruzioni generali procedura LOTO</b><br>${escapeHtml(m.loto.istruzioni).replace(/\n/g, '<br>')}</div>`;
+        }
+      }
+    }
   });
 
   h += `<div style="page-break-before: always;"></div>`;
@@ -2075,6 +2399,26 @@ async function exportDocx() {
       bodyXml += richParagraph([{ text: 'Soluzione Tecnica Suggerita: ', bold: true }, { text: p.soluzioneTecnica || '' }]);
       if ((p.note || '').trim()) bodyXml += richParagraph([{ text: 'Note: ', bold: true }, { text: p.note }]);
     });
+
+    if (getTipoIspezioneValue() === 'LockOut-TagOut' && m.loto) {
+      const haEnergie = LOTO_ENERGIE.some(([key]) => m.loto.selected[key] && (m.loto.energie[key] || []).length);
+      if (haEnergie) {
+        bodyXml += heading('Energie da isolare (LOTO)', { size: 26, color: '2E75B6' });
+        LOTO_ENERGIE.forEach(([key, label]) => {
+          if (!m.loto.selected[key]) return;
+          (m.loto.energie[key] || []).forEach((e, idx) => {
+            bodyXml += paragraph(label + ' ' + (idx + 1), { bold: true, size: 22 });
+            bodyXml += richParagraph([{ text: 'Descrizione: ', bold: true }, { text: e.descrizione || '' }]);
+            bodyXml += richParagraph([{ text: 'Modalità di spegnimento: ', bold: true }, { text: e.spegnimento || '' }]);
+            bodyXml += richParagraph([{ text: 'Modalità di isolamento e blocco: ', bold: true }, { text: e.isolamento || '' }]);
+          });
+        });
+        if ((m.loto.istruzioni || '').trim()) {
+          bodyXml += paragraph('Istruzioni generali procedura LOTO', { bold: true, size: 22 });
+          m.loto.istruzioni.split('\n').forEach(line => { bodyXml += paragraph(line || ' ', { size: 18 }); });
+        }
+      }
+    }
   });
 
   const elencoRows = [];
