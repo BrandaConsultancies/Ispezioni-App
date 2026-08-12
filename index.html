@@ -52,6 +52,7 @@
   .loto-energia-label { font-weight:bold; color:#8a6d1a; margin-bottom:6px; }
   .loto-entry { background:#fff; border-radius:6px; padding:8px; margin-bottom:8px; border:1px solid var(--border); }
   .loto-entry-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:13px; }
+  .loto-field-label { display:block; font-size:12px; color:#667; margin-bottom:3px; font-weight:bold; }
   .loto-entry input, .loto-entry textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:15px; font-family:inherit; margin-bottom:6px; resize:vertical; }
   .add-punto-btn { width:100%; padding:11px; border-radius:8px; border:1px dashed var(--blue-med); background:#fff; color:var(--blue-med); font-weight:bold; font-size:14px; cursor:pointer; }
   .add-machine-btn { width:100%; padding:14px; border-radius:10px; border:2px dashed var(--blue-dark); background:#fff; color:var(--blue-dark); font-weight:bold; font-size:16px; cursor:pointer; margin-bottom:20px; }
@@ -91,7 +92,7 @@
 <header>
   <h1>📋 Ispezione</h1>
   <div class="sub">Report di Ispezione</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.9</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.10</div>
 </header>
 
 <div class="meta">
@@ -894,16 +895,19 @@ function renderLotoBlock(m) {
     entries.forEach((e, idx) => {
       html += `<div class="loto-entry">
         <div class="loto-entry-top"><b>${escapeHtml(label)} ${idx + 1}</b><button class="del-btn" style="font-size:14px" onclick="deleteLotoEntry('${m.id}','${key}','${e.id}')">✕</button></div>
+        <label class="loto-field-label">Descrizione Energia</label>
         <input placeholder="Descrizione energia" value="${escapeAttr(e.descrizione)}"
           onfocus="updateLotoSuggestions('descrizione','${e.id}', this.value)"
           oninput="updateLotoEntryField('${m.id}','${key}','${e.id}','descrizione', this.value); updateLotoSuggestions('descrizione','${e.id}', this.value)"
           onblur="learnLotoFieldValue('descrizione', this.value)">
         <div class="sugg-row" id="sugg-loto-descrizione-${e.id}"></div>
+        <label class="loto-field-label">Modalità di Spegnimento (procedura normale)</label>
         <textarea placeholder="Modalità di spegnimento (procedura normale)"
           onfocus="updateLotoSuggestions('spegnimento','${e.id}', this.value)"
           oninput="updateLotoEntryField('${m.id}','${key}','${e.id}','spegnimento', this.value); updateLotoSuggestions('spegnimento','${e.id}', this.value)"
           onblur="learnLotoFieldValue('spegnimento', this.value)">${escapeHtml(e.spegnimento)}</textarea>
         <div class="sugg-row" id="sugg-loto-spegnimento-${e.id}"></div>
+        <label class="loto-field-label">Modalità di Isolamento e Blocco</label>
         <textarea placeholder="Modalità di isolamento e blocco"
           onfocus="updateLotoSuggestions('isolamento','${e.id}', this.value)"
           oninput="updateLotoEntryField('${m.id}','${key}','${e.id}','isolamento', this.value); updateLotoSuggestions('isolamento','${e.id}', this.value)"
