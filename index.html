@@ -7,83 +7,84 @@
 <style>
   :root { --blue-dark:#0263AC; --blue-med:#2E75B6; --grey:#f2f4f7; --border:#dde3ea; --yellow:#fff3b0; }
   * { box-sizing: border-box; }
-  body { margin:0; font-family: Arial, Helvetica, sans-serif; background: var(--grey); color:#1a1a1a; padding-bottom: 24px; font-size:16px; }
-  header { background: var(--blue-dark); color:#fff; padding:16px 16px 20px; position: sticky; top:0; z-index:10; }
-  header h1 { margin:0 0 4px; font-size:22px; }
-  header .sub { font-size:13px; opacity:.85; }
+  body { margin:0; font-family: Arial, Helvetica, sans-serif; background: var(--grey); color:#000; padding-bottom: 24px; font-size:16px; }
+  header { background: #fff; border-bottom: 1px solid var(--border); color:#000; padding:16px 16px 20px; position: sticky; top:0; z-index:10; }
+  header h1 { margin:0 0 4px; font-size:22px; color:#000; }
+  header .sub { font-size:13px; opacity:.85; color:#000; }
+  header .copyright { font-size:10px; opacity:.6; color:#000; margin-top:4px; }
   .meta { background:#fff; margin:12px; padding:12px; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
-  .meta input, .meta textarea { width:100%; padding:11px 10px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; font-size:16px; font-family:inherit; }
+  .meta input, .meta textarea { width:100%; padding:11px 10px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; font-size:16px; font-family:inherit; color:#000; }
   .meta textarea { min-height:60px; resize:vertical; }
-  .meta label { font-size:13px; color:#667; display:block; margin-bottom:3px; }
-  .meta .section-title { font-size:15px; font-weight:bold; color: var(--blue-dark); margin: 4px 0 8px; }
+  .meta label { font-size:13px; color:#000; display:block; margin-bottom:3px; }
+  .meta .section-title { font-size:15px; font-weight:bold; color:#000; margin: 4px 0 8px; }
   main { padding:0 12px; }
-  .machine-card { background:#fff; border-radius:10px; margin-bottom:16px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,.08); border-left:4px solid var(--blue-dark); }
+  .machine-card { background:#fff; border-radius:10px; margin-bottom:16px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,.08); border-left:4px solid var(--border); }
   .machine-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
   .machine-header .mh-fields { flex:1; display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
   .mh-fields .mh-col { display:flex; flex-direction:column; }
-  .mh-fields .mh-col label { font-size:11px; text-transform:uppercase; letter-spacing:.02em; color:#889; margin-bottom:2px; }
-  .machine-header input { padding:9px 8px; border:1px solid var(--border); border-radius:6px; font-size:15px; font-family:inherit; }
-  .machine-header input.nome { font-weight:bold; color: var(--blue-dark); }
-  .del-btn { background:none; border:none; color:#c0392b; font-size:20px; cursor:pointer; padding:2px 6px; flex-shrink:0; }
-  .punto-card { background: var(--grey); border-radius:8px; padding:10px; margin-bottom:10px; border-left:3px solid var(--blue-med); }
-  .punto-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:14px; font-weight:bold; color: var(--blue-med); }
+  .mh-fields .mh-col label { font-size:11px; text-transform:uppercase; letter-spacing:.02em; color:#000; margin-bottom:2px; }
+  .machine-header input { padding:9px 8px; border:1px solid var(--border); border-radius:6px; font-size:15px; font-family:inherit; color:#000; }
+  .machine-header input.nome { font-weight:bold; color:#000; }
+  .del-btn { background:none; border:none; color:#000; font-size:20px; cursor:pointer; padding:2px 6px; flex-shrink:0; }
+  .punto-card { background: var(--grey); border-radius:8px; padding:10px; margin-bottom:10px; border-left:3px solid var(--border); }
+  .punto-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:14px; font-weight:bold; color:#000; }
   .punto-photo-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
   .punto-photo-row img { width:88px; height:88px; object-fit:cover; border-radius:6px; cursor:zoom-in; }
   .photo-thumb-wrap { position:relative; width:88px; height:88px; }
   .photo-thumb-wrap img { width:88px; height:88px; }
-  .photo-thumb-del { position:absolute; top:-7px; right:-7px; background:#c0392b; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:13px; line-height:1; cursor:pointer; padding:0; }
-  .photo-thumb-rotate { position:absolute; bottom:-7px; right:-7px; background: var(--blue-dark); color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:13px; line-height:1; cursor:pointer; padding:0; }
+  .photo-thumb-del { position:absolute; top:-7px; right:-7px; background:#666; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:13px; line-height:1; cursor:pointer; padding:0; }
+  .photo-thumb-rotate { position:absolute; bottom:-7px; right:-7px; background:#666; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:13px; line-height:1; cursor:pointer; padding:0; }
   .action-btn.photo[disabled] { opacity:.5; cursor:not-allowed; }
-  .action-btn { padding:11px 8px; border-radius:8px; border:none; font-size:14px; font-weight:bold; cursor:pointer; color:#fff; flex:1; }
-  .action-btn.photo { background: var(--blue-med); }
-  .action-btn.mic { background:#2e9e5b; }
-  .action-btn.mic.recording { background:#c0392b; }
+  .action-btn { padding:11px 8px; border-radius:8px; border:1px solid #000; font-size:14px; font-weight:bold; cursor:pointer; color:#000; background:#fff; flex:1; }
+  .action-btn.photo { background:#fff; }
+  .action-btn.mic { background:#fff; }
+  .action-btn.mic.recording { background:#eee; }
   .field-block { margin-bottom:8px; }
-  .field-block label { font-size:13px; color:#667; display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; }
-  .field-block textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:9px; font-size:16px; font-family:inherit; resize:vertical; min-height:48px; }
+  .field-block label { font-size:13px; color:#000; display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; }
+  .field-block textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:9px; font-size:16px; font-family:inherit; resize:vertical; min-height:48px; color:#000; }
   .sugg-row { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
-  .sugg-row .chip { background:#eef2f7; border:1px solid var(--border); border-radius:14px; padding:5px 10px; font-size:12px; color:#334; cursor:pointer; }
-  .loto-block { background:#fff7e6; border:1px solid #f0d999; border-radius:8px; padding:12px; margin-bottom:12px; }
-  .loto-title { font-weight:bold; color:#8a6d1a; font-size:15px; margin-bottom:8px; }
+  .sugg-row .chip { background:#f2f2f2; border:1px solid var(--border); border-radius:14px; padding:5px 10px; font-size:12px; color:#000; cursor:pointer; }
+  .loto-block { background:#fff; border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:12px; }
+  .loto-title { font-weight:bold; color:#000; font-size:15px; margin-bottom:8px; }
   .loto-checks { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:8px; }
-  .loto-check { display:flex; align-items:center; gap:5px; font-size:14px; background:#fff; border:1px solid #f0d999; border-radius:6px; padding:6px 10px; }
+  .loto-check { display:flex; align-items:center; gap:5px; font-size:14px; background:#fff; border:1px solid var(--border); border-radius:6px; padding:6px 10px; color:#000; }
   .loto-check input { width:auto; margin:0; }
-  .loto-energia-group { background:#fffdf5; border:1px dashed #f0d999; border-radius:8px; padding:10px; margin-bottom:10px; }
-  .loto-energia-label { font-weight:bold; color:#8a6d1a; margin-bottom:6px; }
+  .loto-energia-group { background:#fff; border:1px dashed var(--border); border-radius:8px; padding:10px; margin-bottom:10px; }
+  .loto-energia-label { font-weight:bold; color:#000; margin-bottom:6px; }
   .loto-entry { background:#fff; border-radius:6px; padding:8px; margin-bottom:8px; border:1px solid var(--border); }
-  .loto-entry-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:13px; }
-  .loto-field-label { display:block; font-size:12px; color:#667; margin-bottom:3px; font-weight:bold; }
+  .loto-entry-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:13px; color:#000; }
+  .loto-field-label { display:block; font-size:12px; color:#000; margin-bottom:3px; font-weight:bold; }
   .loto-interventi-block { margin-top:6px; }
-  .loto-intervento { background:#fffdf5; border:1px dashed #f0d999; border-radius:8px; padding:10px; margin-bottom:10px; }
-  .loto-intervento textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:15px; font-family:inherit; margin-bottom:8px; resize:vertical; }
+  .loto-intervento { background:#fff; border:1px dashed var(--border); border-radius:8px; padding:10px; margin-bottom:10px; }
+  .loto-intervento textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:15px; font-family:inherit; margin-bottom:8px; resize:vertical; color:#000; }
   .loto-blocco { background:#fff; border:1px solid var(--border); border-radius:6px; padding:8px; margin-bottom:8px; }
-  .loto-blocco-label { font-weight:bold; color:var(--blue-dark); font-size:13px; margin-bottom:6px; }
-  .loto-blocco input, .loto-blocco select { width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:15px; font-family:inherit; margin-bottom:6px; }
+  .loto-blocco-label { font-weight:bold; color:#000; font-size:13px; margin-bottom:6px; }
+  .loto-blocco input, .loto-blocco select { width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:15px; font-family:inherit; margin-bottom:6px; color:#000; }
   .loto-blocco-row.two-col { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .loto-entry input, .loto-entry textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:15px; font-family:inherit; margin-bottom:6px; resize:vertical; }
-  .add-punto-btn { width:100%; padding:11px; border-radius:8px; border:1px dashed var(--blue-med); background:#fff; color:var(--blue-med); font-weight:bold; font-size:14px; cursor:pointer; }
-  .add-machine-btn { width:100%; padding:14px; border-radius:10px; border:2px dashed var(--blue-dark); background:#fff; color:var(--blue-dark); font-weight:bold; font-size:16px; cursor:pointer; margin-bottom:20px; }
+  .loto-entry input, .loto-entry textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:15px; font-family:inherit; margin-bottom:6px; resize:vertical; color:#000; }
+  .add-punto-btn { width:100%; padding:11px; border-radius:8px; border:1px dashed #000; background:#fff; color:#000; font-weight:bold; font-size:14px; cursor:pointer; }
+  .add-machine-btn { width:100%; padding:14px; border-radius:10px; border:2px dashed #000; background:#fff; color:#000; font-weight:bold; font-size:16px; cursor:pointer; margin-bottom:20px; }
   .fab-bar { background:#fff; border-top:1px solid var(--border); border-radius:10px; margin:12px; padding:14px 12px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
-  .export-btn { width:100%; padding:14px; border-radius:10px; border:none; background: var(--blue-dark); color:#fff; font-weight:bold; font-size:17px; cursor:pointer; }
-  .warn { font-size:13px; color:#8a6d3b; background:#fff8e6; border:1px solid #f0e2b6; border-radius:6px; padding:8px 10px; margin:12px; }
+  .export-btn { width:100%; padding:14px; border-radius:10px; border:1px solid #000; background:#fff; color:#000; font-weight:bold; font-size:17px; cursor:pointer; }
+  .warn { font-size:13px; color:#000; background:#fff; border:1px solid var(--border); border-radius:6px; padding:8px 10px; margin:12px; }
   .draft-bar { display:flex; gap:8px; margin:12px; }
-  .draft-btn { flex:1; padding:12px 8px; border-radius:8px; border:1px solid var(--blue-dark); background:#fff; color:var(--blue-dark); font-weight:bold; font-size:14px; cursor:pointer; }
-  .draft-btn.save { background: var(--blue-dark); color:#fff; }
+  .draft-btn { flex:1; padding:12px 8px; border-radius:8px; border:1px solid #000; background:#fff; color:#000; font-weight:bold; font-size:14px; cursor:pointer; }
+  .draft-btn.save { background:#fff; color:#000; }
   .draft-btn.file { border-style:dashed; font-size:14px; }
-  .draft-status { text-align:center; font-size:13px; color: var(--blue-dark); min-height:16px; margin:-4px 12px 4px; }
+  .draft-status { text-align:center; font-size:13px; color:#000; min-height:16px; margin:-4px 12px 4px; }
   #draft-file-input { display:none; }
-  .format-label { display:block; font-size:13px; color:#667; margin-bottom:4px; }
-  #export-format { width:100%; padding:11px 8px; border:1px solid var(--border); border-radius:6px; font-size:16px; font-family:inherit; margin-bottom:8px; }
+  .format-label { display:block; font-size:13px; color:#000; margin-bottom:4px; }
+  #export-format { width:100%; padding:11px 8px; border:1px solid var(--border); border-radius:6px; font-size:16px; font-family:inherit; margin-bottom:8px; color:#000; }
   #print-area { display:none; }
   body.printing > *:not(#print-area) { display:none !important; }
   body.printing #print-area { display:block !important; }
   @media print {
     body:not(.printing) { display:none; }
   }
-  .empty { text-align:center; color:#999; font-size:14px; padding:30px 10px; }
+  .empty { text-align:center; color:#000; font-size:14px; padding:30px 10px; }
   input[type="file"] { display:none; }
   details.extra { background:#fff; margin:12px; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.08); padding:4px 12px; }
-  details.extra summary { padding:10px 0; font-size:15px; font-weight:bold; color: var(--blue-dark); cursor:pointer; }
+  details.extra summary { padding:10px 0; font-size:15px; font-weight:bold; color:#000; cursor:pointer; }
   #photo-lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:2000; align-items:center; justify-content:center; padding:16px; }
   #photo-lightbox.open { display:flex; }
   #photo-lightbox img { max-width:100%; max-height:100%; object-fit:contain; border-radius:6px; }
@@ -99,7 +100,8 @@
 <header>
   <h1>📋 Ispezione</h1>
   <div class="sub">Report di Ispezione</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.11</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.12</div>
+  <div class="copyright">WebApp BrandaConsultancies 2026 — All rights reserved</div>
 </header>
 
 <div class="meta">
