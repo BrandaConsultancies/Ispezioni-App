@@ -34,14 +34,6 @@
   .photo-thumb-wrap img { width:88px; height:88px; }
   .photo-thumb-del { position:absolute; top:-7px; right:-7px; background:#666; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:13px; line-height:1; cursor:pointer; padding:0; }
   .photo-thumb-rotate { position:absolute; bottom:-7px; right:-7px; background:#666; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:13px; line-height:1; cursor:pointer; padding:0; }
-  .photo-thumb-move { position:absolute; bottom:-7px; left:-7px; background:#666; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:12px; line-height:1; cursor:pointer; padding:0; }
-  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:2100; align-items:center; justify-content:center; padding:16px; }
-  .modal-overlay.open { display:flex; }
-  .modal-box { background:#fff; border-radius:10px; padding:16px; max-width:420px; width:100%; max-height:80vh; overflow-y:auto; }
-  .modal-title { font-weight:bold; font-size:16px; margin-bottom:10px; color:#000; }
-  .move-target-btn { display:block; width:100%; text-align:left; padding:10px; margin-bottom:6px; border:1px solid var(--border); border-radius:6px; background:#fff; color:#000; font-size:14px; cursor:pointer; }
-  .move-target-btn[disabled] { opacity:.4; cursor:not-allowed; }
-  .modal-cancel-btn { width:100%; padding:10px; border-radius:8px; border:1px solid #000; background:#fff; color:#000; font-weight:bold; margin-top:8px; cursor:pointer; }
   .action-btn.photo[disabled] { opacity:.5; cursor:not-allowed; }
   .action-btn { padding:11px 8px; border-radius:8px; border:1px solid #000; font-size:14px; font-weight:bold; cursor:pointer; color:#000; background:#fff; flex:1; }
   .action-btn.photo { background:#fff; }
@@ -108,7 +100,7 @@
 <header>
   <h1>📋 Ispezione</h1>
   <div class="sub">Report di Ispezione</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.14</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.15</div>
   <div class="copyright">WebApp BrandaConsultancies 2026 — All rights reserved</div>
 </header>
 
@@ -1400,51 +1392,6 @@ function rotateFotoThumb(macchinaId, puntoId, fotoId, degrees) {
   rotateImageData(ph, degrees, () => render());
 }
 
-let movePhotoRef = null;
-
-function openMovePhotoModal(macchinaId, puntoId, fotoId) {
-  movePhotoRef = { macchinaId, puntoId, fotoId };
-  const listEl = document.getElementById('move-photo-list');
-  let html = '';
-  macchine.forEach(m => {
-    m.punti.forEach((p, idx) => {
-      if (m.id === macchinaId && p.id === puntoId) return; // salta il punto di origine
-      const count = (p.fotos || []).length;
-      const disabled = count >= MAX_FOTO_PER_PUNTO;
-      html += `<button type="button" class="move-target-btn" ${disabled ? 'disabled' : ''} onclick="confirmMovePhoto('${m.id}','${p.id}')">${escapeHtml(m.nomeMacchina || 'Macchina')} — Punto ${idx + 1} (${count}/${MAX_FOTO_PER_PUNTO} foto)${disabled ? ' — pieno' : ''}</button>`;
-    });
-  });
-  if (!html) html = '<div style="padding:12px;color:#667;font-size:13px;">Nessun altro punto disponibile. Crea prima un altro punto ispezionato.</div>';
-  listEl.innerHTML = html;
-  document.getElementById('move-photo-modal').classList.add('open');
-}
-
-function closeMovePhotoModal() {
-  document.getElementById('move-photo-modal').classList.remove('open');
-  movePhotoRef = null;
-}
-
-function confirmMovePhoto(targetMacchinaId, targetPuntoId) {
-  if (!movePhotoRef) return;
-  const srcM = macchine.find(x => x.id === movePhotoRef.macchinaId);
-  const srcP = srcM && srcM.punti.find(x => x.id === movePhotoRef.puntoId);
-  const foto = srcP && (srcP.fotos || []).find(f => f.id === movePhotoRef.fotoId);
-  if (!foto) { closeMovePhotoModal(); return; }
-  const tgtM = macchine.find(x => x.id === targetMacchinaId);
-  const tgtP = tgtM && tgtM.punti.find(x => x.id === targetPuntoId);
-  if (!tgtP) { closeMovePhotoModal(); return; }
-  if ((tgtP.fotos || []).length >= MAX_FOTO_PER_PUNTO) {
-    alert('Il punto di destinazione ha già ' + MAX_FOTO_PER_PUNTO + ' foto (il massimo).');
-    return;
-  }
-  srcP.fotos = srcP.fotos.filter(f => f.id !== foto.id);
-  if (!tgtP.fotos) tgtP.fotos = [];
-  tgtP.fotos.push(foto);
-  closeMovePhotoModal();
-  render();
-  showDraftStatus('⇄ Foto spostata.');
-}
-
 function rotateLightboxPhoto(degrees) {
   if (!lightboxRef) return;
   const ph = findFoto(lightboxRef.macchinaId, lightboxRef.puntoId, lightboxRef.fotoId);
@@ -1596,7 +1543,6 @@ function render() {
               <div class="photo-thumb-wrap">
                 <img src="${ph.src}" onclick="openLightbox('${m.id}','${p.id}','${ph.id}')">
                 <button class="photo-thumb-rotate" onclick="rotateFotoThumb('${m.id}','${p.id}','${ph.id}', 90)">↻</button>
-                <button class="photo-thumb-move" onclick="openMovePhotoModal('${m.id}','${p.id}','${ph.id}')">⇄</button>
                 <button class="photo-thumb-del" onclick="deleteFoto('${m.id}','${p.id}','${ph.id}')">✕</button>
               </div>`).join('')}
           </div>
@@ -2716,13 +2662,6 @@ handleDropboxRedirect();
     <button onclick="rotateLightboxPhoto(90)">⟳ Ruota destra</button>
   </div>
   <img id="lightbox-img" src="" onclick="event.stopPropagation()">
-</div>
-<div id="move-photo-modal" class="modal-overlay" onclick="closeMovePhotoModal()">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-title">Sposta foto a...</div>
-    <div id="move-photo-list"></div>
-    <button class="modal-cancel-btn" onclick="closeMovePhotoModal()">Annulla</button>
-  </div>
 </div>
 <datalist id="list-reparti"></datalist>
 <datalist id="list-macchine"></datalist>
