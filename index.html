@@ -112,7 +112,7 @@
 <header>
   <h1>📋 Ispezione</h1>
   <div class="sub">Report di Ispezione</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.21-debug</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.22</div>
   <div class="copyright">WebApp BrandaConsultancies 2026 — All rights reserved</div>
 </header>
 
@@ -487,6 +487,9 @@ function migrateMacchine(loadedMacchine) {
       if (!Array.isArray(p.fotos)) {
         p.fotos = p.foto ? [p.foto] : [];
       }
+      // Le foto più vecchie (da prima del supporto multi-foto) non avevano un id: lo aggiungiamo qui,
+      // altrimenti funzioni come sposta/ruota/elimina non riescono a identificare la foto giusta.
+      p.fotos.forEach(f => { if (!f.id) f.id = 'ph' + Date.now() + Math.random(); });
     });
   });
   return loadedMacchine || [];
@@ -1447,10 +1450,8 @@ function movePhotoToTarget(srcMacchinaId, srcPuntoId, fotoId, tgtMacchinaId, tgt
 }
 
 function confirmMovePhoto(targetMacchinaId, targetPuntoId) {
-  if (!movePhotoRef) { alert('DEBUG: nessuna foto di origine registrata (movePhotoRef vuoto).'); return; }
-  const debugInfo = 'DEBUG spostamento (pulsante ⇄)\nOrigine macchina: ' + movePhotoRef.macchinaId + '\nOrigine punto: ' + movePhotoRef.puntoId + '\nFoto id: ' + movePhotoRef.fotoId + '\nDestinazione macchina: ' + targetMacchinaId + '\nDestinazione punto: ' + targetPuntoId;
+  if (!movePhotoRef) return;
   const ok = movePhotoToTarget(movePhotoRef.macchinaId, movePhotoRef.puntoId, movePhotoRef.fotoId, targetMacchinaId, targetPuntoId);
-  alert(debugInfo + '\nEsito: ' + (ok ? 'RIUSCITO' : 'FALLITO'));
   closeMovePhotoModal();
   if (ok) { render(); showDraftStatus('⇄ Foto spostata.'); }
 }
@@ -1521,19 +1522,11 @@ function onPhotoPointerUp(e) {
   const y = (e.clientY != null && e.clientY !== 0) ? e.clientY : state.lastY;
   const under = document.elementFromPoint(x, y);
   const zone = under && under.closest('.punto-photo-row[data-punto-id]');
-  if (!zone) {
-    alert('DEBUG trascinamento: nessuna zona di destinazione trovata sotto il punto di rilascio.\nCoordinate usate: ' + x + ',' + y + '\nElemento sotto il dito: ' + (under ? (under.tagName + '.' + (under.className || '(nessuna classe)')) : 'nessuno'));
-    return;
-  }
+  if (!zone) return;
   const tgtMacchinaId = zone.getAttribute('data-macchina-id');
   const tgtPuntoId = zone.getAttribute('data-punto-id');
-  if (tgtPuntoId === state.puntoId) {
-    alert('DEBUG trascinamento: la zona rilevata è lo stesso punto di origine (' + tgtPuntoId + '), nessuno spostamento necessario.');
-    return;
-  }
-  const debugInfo = 'DEBUG trascinamento\nOrigine punto: ' + state.puntoId + '\nDestinazione punto: ' + tgtPuntoId;
+  if (tgtPuntoId === state.puntoId) return; // rilasciata sullo stesso punto, nessuna azione
   const ok = movePhotoToTarget(state.macchinaId, state.puntoId, state.fotoId, tgtMacchinaId, tgtPuntoId);
-  alert(debugInfo + '\nEsito: ' + (ok ? 'RIUSCITO' : 'FALLITO'));
   if (ok) { render(); showDraftStatus('⇄ Foto spostata trascinandola.'); }
 }
 
@@ -1684,14 +1677,17 @@ function render() {
             <button class="del-btn" style="font-size:14px" onclick="deletePunto('${m.id}','${p.id}')">✕</button>
           </div>
           <div class="punto-photo-row" data-macchina-id="${m.id}" data-punto-id="${p.id}">
-            ${(p.fotos || []).map(ph => `
+            ${(p.fotos || []).map(ph => {
+              if (!ph.id) ph.id = 'ph' + Date.now() + Math.random();
+              return `
               <div class="photo-thumb-wrap">
                 <img src="${ph.src}" draggable="false" onclick="openLightbox('${m.id}','${p.id}','${ph.id}')"
                   onpointerdown="onPhotoPointerDown(event,'${m.id}','${p.id}','${ph.id}')">
                 <button class="photo-thumb-rotate" onclick="rotateFotoThumb('${m.id}','${p.id}','${ph.id}', 90)">↻</button>
                 <button class="photo-thumb-move" onclick="openMovePhotoModal('${m.id}','${p.id}','${ph.id}')">⇄</button>
                 <button class="photo-thumb-del" onclick="deleteFoto('${m.id}','${p.id}','${ph.id}')">✕</button>
-              </div>`).join('')}
+              </div>`;
+            }).join('')}
           </div>
           <div class="punto-photo-row">
             <button class="action-btn photo" ${(p.fotos || []).length >= MAX_FOTO_PER_PUNTO ? 'disabled' : ''} onclick="triggerFoto('${m.id}','${p.id}')">📷 Aggiungi foto (${(p.fotos || []).length}/${MAX_FOTO_PER_PUNTO})</button>
