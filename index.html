@@ -112,7 +112,7 @@
 <header>
   <h1>📋 Ispezione</h1>
   <div class="sub">Report di Ispezione</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.19</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.20</div>
   <div class="copyright">WebApp BrandaConsultancies 2026 — All rights reserved</div>
 </header>
 
@@ -1676,7 +1676,7 @@ function render() {
           <div class="punto-photo-row" data-macchina-id="${m.id}" data-punto-id="${p.id}">
             ${(p.fotos || []).map(ph => `
               <div class="photo-thumb-wrap">
-                <img src="${ph.src}" onclick="openLightbox('${m.id}','${p.id}','${ph.id}')"
+                <img src="${ph.src}" draggable="false" onclick="openLightbox('${m.id}','${p.id}','${ph.id}')"
                   onpointerdown="onPhotoPointerDown(event,'${m.id}','${p.id}','${ph.id}')">
                 <button class="photo-thumb-rotate" onclick="rotateFotoThumb('${m.id}','${p.id}','${ph.id}', 90)">↻</button>
                 <button class="photo-thumb-move" onclick="openMovePhotoModal('${m.id}','${p.id}','${ph.id}')">⇄</button>
@@ -2793,6 +2793,9 @@ handleDropboxRedirect();
 document.addEventListener('pointermove', onPhotoPointerMove);
 document.addEventListener('pointerup', onPhotoPointerUp);
 document.addEventListener('pointercancel', onPhotoPointerUp);
+document.addEventListener('dragstart', e => {
+  if (e.target && e.target.closest('.photo-thumb-wrap')) e.preventDefault();
+});
 </script>
 <div id="print-area"></div>
 <div id="photo-lightbox" onclick="closeLightbox()">
