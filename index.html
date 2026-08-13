@@ -100,7 +100,7 @@
 <header>
   <h1>📋 Ispezione</h1>
   <div class="sub">Report di Ispezione</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.15</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.16</div>
   <div class="copyright">WebApp BrandaConsultancies 2026 — All rights reserved</div>
 </header>
 
@@ -163,7 +163,7 @@
     <button class="draft-btn save" id="dbx-connect-btn" onclick="connectDropbox()">🔗 Collega Dropbox</button>
     <button class="draft-btn file" onclick="disconnectDropbox()">🔌 Scollega</button>
   </div>
-  <label>Nome bozza (per averne più di una)</label>
+  <label>Nome bozza (vale sia per Dropbox che per "Bozza su file" qui sotto)</label>
   <input id="dbx-draft-name" placeholder="es. QTA-Agosto — lascia vuoto per usare 'corrente'">
   <div class="draft-bar" style="margin:0 0 8px;">
     <button class="draft-btn file" onclick="saveDraftToDropbox()">☁️ Salva bozza</button>
@@ -550,7 +550,7 @@ function downloadDraftFile() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'Bozza_Ispezione_' + buildBaseFilename() + '.json';
+  link.download = draftFilename();
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
