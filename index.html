@@ -112,7 +112,7 @@
 <header>
   <h1>📋 Ispezione</h1>
   <div class="sub">Report di Ispezione</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.18</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.19</div>
   <div class="copyright">WebApp BrandaConsultancies 2026 — All rights reserved</div>
 </header>
 
@@ -1462,13 +1462,19 @@ function onPhotoPointerDown(e, macchinaId, puntoId, fotoId) {
   photoDragState = {
     macchinaId, puntoId, fotoId,
     startX: e.clientX, startY: e.clientY,
+    lastX: e.clientX, lastY: e.clientY,
     dragging: false,
     srcImg: e.currentTarget,
+    pointerId: e.pointerId,
   };
+  try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* non supportato, si va avanti senza */ }
 }
 
 function onPhotoPointerMove(e) {
   if (!photoDragState) return;
+  if (photoDragState.pointerId != null && e.pointerId !== photoDragState.pointerId) return;
+  photoDragState.lastX = e.clientX;
+  photoDragState.lastY = e.clientY;
   const dx = e.clientX - photoDragState.startX;
   const dy = e.clientY - photoDragState.startY;
   if (!photoDragState.dragging && Math.hypot(dx, dy) > PHOTO_DRAG_THRESHOLD) {
@@ -1486,7 +1492,9 @@ function onPhotoPointerMove(e) {
     photoDragState.ghostEl.style.left = (e.clientX - 44) + 'px';
     photoDragState.ghostEl.style.top = (e.clientY - 44) + 'px';
     document.querySelectorAll('.punto-photo-row.drop-hover').forEach(el => el.classList.remove('drop-hover'));
+    photoDragState.ghostEl.style.display = 'none';
     const under = document.elementFromPoint(e.clientX, e.clientY);
+    photoDragState.ghostEl.style.display = '';
     const zone = under && under.closest('.punto-photo-row[data-punto-id]');
     if (zone && zone.getAttribute('data-punto-id') !== photoDragState.puntoId) {
       zone.classList.add('drop-hover');
@@ -1496,6 +1504,7 @@ function onPhotoPointerMove(e) {
 
 function onPhotoPointerUp(e) {
   if (!photoDragState) return;
+  if (photoDragState.pointerId != null && e.pointerId !== photoDragState.pointerId) return;
   const state = photoDragState;
   photoDragState = null;
   if (!state.dragging) return; // era solo un tocco: il click che apre il lightbox segue normalmente
@@ -1503,7 +1512,12 @@ function onPhotoPointerUp(e) {
   if (state.ghostEl) state.ghostEl.remove();
   const wrap = state.srcImg.closest('.photo-thumb-wrap');
   if (wrap) wrap.classList.remove('dragging');
-  const under = document.elementFromPoint(e.clientX, e.clientY);
+  // Alcuni browser mobile, quando il dito si solleva, mandano coordinate inattendibili
+  // nell'evento di rilascio (o addirittura un evento "annullato" invece che "rilasciato normalmente").
+  // Usiamo quindi l'ultima posizione buona vista durante il trascinamento, non quella dell'evento finale.
+  const x = (e.clientX != null && e.clientX !== 0) ? e.clientX : state.lastX;
+  const y = (e.clientY != null && e.clientY !== 0) ? e.clientY : state.lastY;
+  const under = document.elementFromPoint(x, y);
   const zone = under && under.closest('.punto-photo-row[data-punto-id]');
   if (!zone) return;
   const tgtMacchinaId = zone.getAttribute('data-macchina-id');
