@@ -34,6 +34,18 @@
   .photo-thumb-wrap img { width:88px; height:88px; }
   .photo-thumb-del { position:absolute; top:-7px; right:-7px; background:#666; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:13px; line-height:1; cursor:pointer; padding:0; }
   .photo-thumb-rotate { position:absolute; bottom:-7px; right:-7px; background:#666; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:13px; line-height:1; cursor:pointer; padding:0; }
+  .photo-thumb-move { position:absolute; bottom:-7px; left:-7px; background:#666; color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:12px; line-height:1; cursor:pointer; padding:0; }
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:2100; align-items:center; justify-content:center; padding:16px; }
+  .modal-overlay.open { display:flex; }
+  .modal-box { background:#fff; border-radius:10px; padding:16px; max-width:420px; width:100%; max-height:80vh; overflow-y:auto; }
+  .modal-title { font-weight:bold; font-size:16px; margin-bottom:10px; color:#000; }
+  .move-target-btn { display:block; width:100%; text-align:left; padding:10px; margin-bottom:6px; border:1px solid var(--border); border-radius:6px; background:#fff; color:#000; font-size:14px; cursor:pointer; }
+  .move-target-btn[disabled] { opacity:.4; cursor:not-allowed; }
+  .modal-cancel-btn { width:100%; padding:10px; border-radius:8px; border:1px solid #000; background:#fff; color:#000; font-weight:bold; margin-top:8px; cursor:pointer; }
+  .photo-thumb-wrap img { touch-action:none; -webkit-user-drag:none; user-select:none; }
+  .photo-thumb-wrap.dragging { opacity:.35; }
+  .drag-ghost { position:fixed; pointer-events:none; z-index:3000; width:88px; height:88px; border-radius:6px; object-fit:cover; opacity:.85; box-shadow:0 4px 14px rgba(0,0,0,.45); }
+  .punto-photo-row.drop-hover { outline:3px dashed #000; outline-offset:4px; background:#eee; border-radius:8px; }
   .action-btn.photo[disabled] { opacity:.5; cursor:not-allowed; }
   .action-btn { padding:11px 8px; border-radius:8px; border:1px solid #000; font-size:14px; font-weight:bold; cursor:pointer; color:#000; background:#fff; flex:1; }
   .action-btn.photo { background:#fff; }
@@ -100,7 +112,7 @@
 <header>
   <h1>📋 Ispezione</h1>
   <div class="sub">Report di Ispezione</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.16</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.18</div>
   <div class="copyright">WebApp BrandaConsultancies 2026 — All rights reserved</div>
 </header>
 
@@ -1392,6 +1404,115 @@ function rotateFotoThumb(macchinaId, puntoId, fotoId, degrees) {
   rotateImageData(ph, degrees, () => render());
 }
 
+let movePhotoRef = null;
+
+function openMovePhotoModal(macchinaId, puntoId, fotoId) {
+  movePhotoRef = { macchinaId, puntoId, fotoId };
+  const listEl = document.getElementById('move-photo-list');
+  let html = '';
+  macchine.forEach(m => {
+    m.punti.forEach((p, idx) => {
+      if (m.id === macchinaId && p.id === puntoId) return; // salta il punto di origine
+      const count = (p.fotos || []).length;
+      const disabled = count >= MAX_FOTO_PER_PUNTO;
+      html += `<button type="button" class="move-target-btn" ${disabled ? 'disabled' : ''} onclick="confirmMovePhoto('${m.id}','${p.id}')">${escapeHtml(m.nomeMacchina || 'Macchina')} — Punto ${idx + 1} (${count}/${MAX_FOTO_PER_PUNTO} foto)${disabled ? ' — pieno' : ''}</button>`;
+    });
+  });
+  if (!html) html = '<div style="padding:12px;color:#667;font-size:13px;">Nessun altro punto disponibile. Crea prima un altro punto ispezionato.</div>';
+  listEl.innerHTML = html;
+  document.getElementById('move-photo-modal').classList.add('open');
+}
+
+function closeMovePhotoModal() {
+  document.getElementById('move-photo-modal').classList.remove('open');
+  movePhotoRef = null;
+}
+
+function movePhotoToTarget(srcMacchinaId, srcPuntoId, fotoId, tgtMacchinaId, tgtPuntoId) {
+  const srcM = macchine.find(x => x.id === srcMacchinaId);
+  const srcP = srcM && srcM.punti.find(x => x.id === srcPuntoId);
+  const foto = srcP && (srcP.fotos || []).find(f => f.id === fotoId);
+  if (!foto) return false;
+  const tgtM = macchine.find(x => x.id === tgtMacchinaId);
+  const tgtP = tgtM && tgtM.punti.find(x => x.id === tgtPuntoId);
+  if (!tgtP) return false;
+  if ((tgtP.fotos || []).length >= MAX_FOTO_PER_PUNTO) {
+    alert('Il punto di destinazione ha già ' + MAX_FOTO_PER_PUNTO + ' foto (il massimo).');
+    return false;
+  }
+  srcP.fotos = srcP.fotos.filter(f => f.id !== foto.id);
+  if (!tgtP.fotos) tgtP.fotos = [];
+  tgtP.fotos.push(foto);
+  return true;
+}
+
+function confirmMovePhoto(targetMacchinaId, targetPuntoId) {
+  if (!movePhotoRef) return;
+  const ok = movePhotoToTarget(movePhotoRef.macchinaId, movePhotoRef.puntoId, movePhotoRef.fotoId, targetMacchinaId, targetPuntoId);
+  closeMovePhotoModal();
+  if (ok) { render(); showDraftStatus('⇄ Foto spostata.'); }
+}
+
+// ===== Trascinamento diretto della foto (pointer down/move/up) =====
+let photoDragState = null;
+const PHOTO_DRAG_THRESHOLD = 12;
+
+function onPhotoPointerDown(e, macchinaId, puntoId, fotoId) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  photoDragState = {
+    macchinaId, puntoId, fotoId,
+    startX: e.clientX, startY: e.clientY,
+    dragging: false,
+    srcImg: e.currentTarget,
+  };
+}
+
+function onPhotoPointerMove(e) {
+  if (!photoDragState) return;
+  const dx = e.clientX - photoDragState.startX;
+  const dy = e.clientY - photoDragState.startY;
+  if (!photoDragState.dragging && Math.hypot(dx, dy) > PHOTO_DRAG_THRESHOLD) {
+    photoDragState.dragging = true;
+    const ghost = document.createElement('img');
+    ghost.src = photoDragState.srcImg.src;
+    ghost.className = 'drag-ghost';
+    document.body.appendChild(ghost);
+    photoDragState.ghostEl = ghost;
+    const wrap = photoDragState.srcImg.closest('.photo-thumb-wrap');
+    if (wrap) wrap.classList.add('dragging');
+  }
+  if (photoDragState.dragging) {
+    e.preventDefault();
+    photoDragState.ghostEl.style.left = (e.clientX - 44) + 'px';
+    photoDragState.ghostEl.style.top = (e.clientY - 44) + 'px';
+    document.querySelectorAll('.punto-photo-row.drop-hover').forEach(el => el.classList.remove('drop-hover'));
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const zone = under && under.closest('.punto-photo-row[data-punto-id]');
+    if (zone && zone.getAttribute('data-punto-id') !== photoDragState.puntoId) {
+      zone.classList.add('drop-hover');
+    }
+  }
+}
+
+function onPhotoPointerUp(e) {
+  if (!photoDragState) return;
+  const state = photoDragState;
+  photoDragState = null;
+  if (!state.dragging) return; // era solo un tocco: il click che apre il lightbox segue normalmente
+  document.querySelectorAll('.punto-photo-row.drop-hover').forEach(el => el.classList.remove('drop-hover'));
+  if (state.ghostEl) state.ghostEl.remove();
+  const wrap = state.srcImg.closest('.photo-thumb-wrap');
+  if (wrap) wrap.classList.remove('dragging');
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const zone = under && under.closest('.punto-photo-row[data-punto-id]');
+  if (!zone) return;
+  const tgtMacchinaId = zone.getAttribute('data-macchina-id');
+  const tgtPuntoId = zone.getAttribute('data-punto-id');
+  if (tgtPuntoId === state.puntoId) return; // rilasciata sullo stesso punto, nessuna azione
+  const ok = movePhotoToTarget(state.macchinaId, state.puntoId, state.fotoId, tgtMacchinaId, tgtPuntoId);
+  if (ok) { render(); showDraftStatus('⇄ Foto spostata trascinandola.'); }
+}
+
 function rotateLightboxPhoto(degrees) {
   if (!lightboxRef) return;
   const ph = findFoto(lightboxRef.macchinaId, lightboxRef.puntoId, lightboxRef.fotoId);
@@ -1538,11 +1659,13 @@ function render() {
           <div class="punto-top"><span>Punto ${idx + 1}</span>
             <button class="del-btn" style="font-size:14px" onclick="deletePunto('${m.id}','${p.id}')">✕</button>
           </div>
-          <div class="punto-photo-row">
+          <div class="punto-photo-row" data-macchina-id="${m.id}" data-punto-id="${p.id}">
             ${(p.fotos || []).map(ph => `
               <div class="photo-thumb-wrap">
-                <img src="${ph.src}" onclick="openLightbox('${m.id}','${p.id}','${ph.id}')">
+                <img src="${ph.src}" onclick="openLightbox('${m.id}','${p.id}','${ph.id}')"
+                  onpointerdown="onPhotoPointerDown(event,'${m.id}','${p.id}','${ph.id}')">
                 <button class="photo-thumb-rotate" onclick="rotateFotoThumb('${m.id}','${p.id}','${ph.id}', 90)">↻</button>
+                <button class="photo-thumb-move" onclick="openMovePhotoModal('${m.id}','${p.id}','${ph.id}')">⇄</button>
                 <button class="photo-thumb-del" onclick="deleteFoto('${m.id}','${p.id}','${ph.id}')">✕</button>
               </div>`).join('')}
           </div>
@@ -2653,6 +2776,9 @@ render();
 loadAnagrafiche();
 initDropboxFields();
 handleDropboxRedirect();
+document.addEventListener('pointermove', onPhotoPointerMove);
+document.addEventListener('pointerup', onPhotoPointerUp);
+document.addEventListener('pointercancel', onPhotoPointerUp);
 </script>
 <div id="print-area"></div>
 <div id="photo-lightbox" onclick="closeLightbox()">
@@ -2662,6 +2788,13 @@ handleDropboxRedirect();
     <button onclick="rotateLightboxPhoto(90)">⟳ Ruota destra</button>
   </div>
   <img id="lightbox-img" src="" onclick="event.stopPropagation()">
+</div>
+<div id="move-photo-modal" class="modal-overlay" onclick="closeMovePhotoModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title">Sposta foto a...</div>
+    <div id="move-photo-list"></div>
+    <button class="modal-cancel-btn" onclick="closeMovePhotoModal()">Annulla</button>
+  </div>
 </div>
 <datalist id="list-reparti"></datalist>
 <datalist id="list-macchine"></datalist>
