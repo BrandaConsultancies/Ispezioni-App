@@ -42,6 +42,10 @@
   .move-target-btn { display:block; width:100%; text-align:left; padding:10px; margin-bottom:6px; border:1px solid var(--border); border-radius:6px; background:#fff; color:#000; font-size:14px; cursor:pointer; }
   .move-target-btn[disabled] { opacity:.4; cursor:not-allowed; }
   .modal-cancel-btn { width:100%; padding:10px; border-radius:8px; border:1px solid #000; background:#fff; color:#000; font-weight:bold; margin-top:8px; cursor:pointer; }
+  #manage-list-category { width:100%; padding:9px 8px; border:1px solid var(--border); border-radius:6px; font-size:15px; font-family:inherit; margin-bottom:4px; color:#000; }
+  .manage-list-row { display:flex; gap:6px; align-items:flex-start; margin-bottom:8px; }
+  .manage-list-row textarea { flex:1; border:1px solid var(--border); border-radius:6px; padding:7px; font-size:14px; font-family:inherit; resize:vertical; min-height:38px; color:#000; }
+  .manage-list-row button { flex-shrink:0; }
   .photo-thumb-wrap img { touch-action:none; -webkit-user-drag:none; user-select:none; }
   .photo-thumb-wrap.dragging { opacity:.35; }
   .drag-ghost { position:fixed; pointer-events:none; z-index:3000; width:88px; height:88px; border-radius:6px; object-fit:cover; opacity:.85; box-shadow:0 4px 14px rgba(0,0,0,.45); }
@@ -112,7 +116,7 @@
 <header>
   <h1>📋 Ispezione</h1>
   <div class="sub">Report di Ispezione</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.22</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.23</div>
   <div class="copyright">WebApp BrandaConsultancies 2026 — All rights reserved</div>
 </header>
 
@@ -199,6 +203,10 @@
     <button class="draft-btn file" onclick="harvestPuntoTextIntoAnagraficheManual()">🔄 Aggiorna suggerimenti da questo report</button>
   </div>
   <div style="font-size:11px; color:#667; margin:6px 0 10px;">Cattura subito nella lista suggerimenti tutto ciò che hai già scritto in NC/Osservazione, Soluzione Suggerita e Note in questo report — normalmente avviene da solo ogni 5 minuti col salvataggio automatico, questo pulsante lo fa subito.</div>
+  <div class="draft-bar" style="margin:8px 0 0;">
+    <button class="draft-btn file" onclick="openManageListsModal()">📋 Vedi e correggi le liste suggerimenti</button>
+  </div>
+  <div style="font-size:11px; color:#667; margin:6px 0 10px;">Elenco completo di tutto quello che è stato imparato — NC, Soluzioni, Note, campi LOTO, Reparti, Macchine, Codici — modificabile o cancellabile voce per voce.</div>
   <div class="draft-bar" style="margin:8px 0 0;">
     <button class="draft-btn file" onclick="triggerMachineRegistryImport()">📥 Importa elenco macchine (XLS)</button>
     <input type="file" id="registry-file-input" accept=".xlsx,.xls" onchange="handleMachineRegistryFile(event)">
@@ -722,6 +730,43 @@ function harvestPuntoTextIntoAnagraficheManual() {
   const changed2 = harvestLotoTextIntoAnagrafiche();
   const changed = changed1 || changed2;
   showDraftStatus(changed ? '🔄 Suggerimenti aggiornati da questo report.' : 'Niente di nuovo da aggiungere ai suggerimenti.');
+}
+
+function openManageListsModal() {
+  document.getElementById('manage-lists-modal').classList.add('open');
+  renderManageListsContent();
+}
+function closeManageListsModal() {
+  document.getElementById('manage-lists-modal').classList.remove('open');
+}
+function renderManageListsContent() {
+  const cat = document.getElementById('manage-list-category').value;
+  const list = anagrafiche[cat] || [];
+  const container = document.getElementById('manage-list-content');
+  if (!list.length) {
+    container.innerHTML = '<div style="font-size:13px;color:#667;padding:8px 0;">Nessuna voce in questa lista.</div>';
+    return;
+  }
+  container.innerHTML = list.map((v, idx) => `
+    <div class="manage-list-row">
+      <textarea onchange="updateManageListEntry('${cat}', ${idx}, this.value)">${escapeHtml(v)}</textarea>
+      <button class="del-btn" style="font-size:16px" onclick="deleteManageListEntry('${cat}', ${idx})">✕</button>
+    </div>`).join('');
+}
+function updateManageListEntry(cat, idx, value) {
+  if (!anagrafiche[cat]) return;
+  const v = value.trim();
+  if (!v) { deleteManageListEntry(cat, idx); return; }
+  anagrafiche[cat][idx] = v;
+  saveAnagrafiche();
+  renderDatalists();
+}
+function deleteManageListEntry(cat, idx) {
+  if (!anagrafiche[cat]) return;
+  anagrafiche[cat].splice(idx, 1);
+  saveAnagrafiche();
+  renderDatalists();
+  renderManageListsContent();
 }
 
 function updateMacchinaField(id, field, value) {
@@ -2817,6 +2862,25 @@ document.addEventListener('dragstart', e => {
     <div class="modal-title">Sposta foto a...</div>
     <div id="move-photo-list"></div>
     <button class="modal-cancel-btn" onclick="closeMovePhotoModal()">Annulla</button>
+  </div>
+</div>
+<div id="manage-lists-modal" class="modal-overlay" onclick="closeManageListsModal()">
+  <div class="modal-box" style="max-width:520px;" onclick="event.stopPropagation()">
+    <div class="modal-title">Liste suggerimenti</div>
+    <label class="loto-field-label">Categoria</label>
+    <select id="manage-list-category" onchange="renderManageListsContent()">
+      <option value="nc">NC rilevata / Osservazione</option>
+      <option value="soluzioni">Soluzione Tecnica Suggerita</option>
+      <option value="note">Note</option>
+      <option value="lotoDescrizione">LOTO — Descrizione Energia</option>
+      <option value="lotoSpegnimento">LOTO — Modalità di Spegnimento</option>
+      <option value="lotoIsolamento">LOTO — Modalità di Isolamento</option>
+      <option value="reparti">Reparto</option>
+      <option value="macchine">Macchina</option>
+      <option value="codici">Codice Macchina</option>
+    </select>
+    <div id="manage-list-content" style="margin-top:10px; max-height:45vh; overflow-y:auto;"></div>
+    <button class="modal-cancel-btn" onclick="closeManageListsModal()">Chiudi</button>
   </div>
 </div>
 <datalist id="list-reparti"></datalist>
