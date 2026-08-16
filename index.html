@@ -116,7 +116,7 @@
 <header>
   <h1>📋 Ispezione</h1>
   <div class="sub">Report di Ispezione</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.24</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.25</div>
   <div class="copyright">WebApp BrandaConsultancies 2026 — All rights reserved</div>
 </header>
 
@@ -615,7 +615,46 @@ function addMacchina() {
 function deleteMacchina(id) { macchine = macchine.filter(m => m.id !== id); render(); }
 
 const FIELD_TO_LIST = { reparto: 'reparti', nomeMacchina: 'macchine', codiceMacchina: 'codici' };
-let anagrafiche = { reparti: [], macchine: [], codici: [], nc: [], soluzioni: [], note: [], lotoDescrizione: [], lotoSpegnimento: [], lotoIsolamento: [] };
+const DEFAULT_NC_SEED = [
+    "Junction Box Ex e/Ex i\nN. 2 Pressacavi / Passaparete con cavo mancante\nIP compromesso",
+    "Box\nNon congruo alla Zona di Installazione, in quanto NON Ex",
+    "Box con Dispositivi elettrici\nNon congruo alla Zona di Installazione, in quanto NON Ex",
+    "Quadro di Controllo con Operatori\nNon congruo alla Zona di Installazione, in quanto NON Ex",
+    "Sensore di Livello (recente)\nNon congruo alla Zona di Installazione, in quanto NON Ex",
+    "Lampada al Neon",
+    "Guina Cavo danneggiata e non inserita nel gommino del pressacavo.\nInficiato il Metodo di Protezione Ex d",
+    "Accumulo di Polveri, riduzione della dissipazione termica\nPossibili reazioni esotermiche",
+    "Dispositivo NON Ex\nNon congruo alla Zona di Installazione, in quanto NON Ex",
+    "Motore\nNon congruo alla Zona di Installazione, in quanto NON Ex",
+    "Connettori Elettrici NON Ex",
+  ];
+
+const DEFAULT_SOLUZIONI_SEED = [
+    "Sostituire Passaparete con Tappo certificato Ex e",
+    "Sostituzione",
+    "Sostituzione",
+    "Sostituzione",
+    "Sostituzione",
+    "Sostituzione (vedi nota)",
+    "Adeguamento Cablaggio su Pressacavo",
+    "Pulizia periodica",
+    "Sostituzione (vedi nota)",
+    "Sostituzione (vedi nota)\nPulizia periodica per ridurre Accumulo di Polveri, che riduce la dissipazione termica\nPossibili reazioni esotermiche",
+    "Sostituzione / Adeguamento",
+  ];
+
+const DEFAULT_NOTE_SEED = [
+    "Da sostituirsi quando danneggiato o non funzionante con dispositivo congruo alla Zona di Installazione 22",
+    "Da sostituirsi quando danneggiato o non funzionante con dispositivo congruo alla Zona di Installazione 22",
+    "Da sostituirsi quando danneggiato o non funzionante con dispositivo congruo alla Zona di Installazione 22",
+    "Sensore recentemente installato, valutare sostizuione con Dispositivio congruo alla Zona di Installazione",
+    "INFO da MTZ (Marco Bovelacci)\nConcordato con Consulente Rapetti la SOSTITUZIONE quando danneggiato o lampada bruciata\nAlcune Lampada già sostituite con altre aventi Metodo di Protezione Ex e",
+    "Da sostituirsi quando danneggiato o non funzionante con dispositivo congruo alla Zona di Installazione 22",
+    "Da sostituirsi quando danneggiato o non funzionante con dispositivo congruo alla Zona di Installazione 22",
+    "Connettore triplo con spina comune\nPericolo di scintillio",
+  ];
+
+let anagrafiche = { reparti: [], macchine: [], codici: [], nc: [...DEFAULT_NC_SEED], soluzioni: [...DEFAULT_SOLUZIONI_SEED], note: [...DEFAULT_NOTE_SEED], lotoDescrizione: [], lotoSpegnimento: [], lotoIsolamento: [] };
 let machineRegistry = []; // [{ codice, macchina, reparto }] importato da XLS
 
 function renderDatalists() {
@@ -631,16 +670,44 @@ function renderDatalists() {
   });
 }
 
+const DEFAULT_NC_SEED = [
+  { nc: 'Junction Box Ex e/Ex i\nN. 2 Pressacavi / Passaparete con cavo mancante\nIP compromesso', sol: 'Sostituire Passaparete con Tappo certificato Ex e', note: '' },
+  { nc: 'Box\nNon congruo alla Zona di Installazione, in quanto NON Ex', sol: 'Sostituzione', note: 'Da sostituirsi quando danneggiato o non funzionante con dispositivo congruo alla Zona di Installazione 22' },
+  { nc: 'Box con Dispositivi elettrici\nNon congruo alla Zona di Installazione, in quanto NON Ex', sol: 'Sostituzione', note: 'Da sostituirsi quando danneggiato o non funzionante con dispositivo congruo alla Zona di Installazione 22' },
+  { nc: 'Quadro di Controllo con Operatori\nNon congruo alla Zona di Installazione, in quanto NON Ex', sol: 'Sostituzione', note: 'Da sostituirsi quando danneggiato o non funzionante con dispositivo congruo alla Zona di Installazione 22' },
+  { nc: 'Sensore di Livello (recente)\nNon congruo alla Zona di Installazione, in quanto NON Ex', sol: 'Sostituzione', note: 'Sensore recentemente installato, valutare sostizuione con Dispositivio congruo alla Zona di Installazione' },
+  { nc: 'Lampada al Neon', sol: 'Sostituzione (vedi nota)', note: 'INFO da MTZ (Marco Bovelacci)\nConcordato con Consulente Rapetti la SOSTITUZIONE quando danneggiato o lampada bruciata\nAlcune Lampada già sostituite con altre aventi Metodo di Protezione Ex e' },
+  { nc: 'Guina Cavo danneggiata e non inserita nel gommino del pressacavo.\nInficiato il Metodo di Protezione Ex d', sol: 'Adeguamento Cablaggio su Pressacavo', note: '' },
+  { nc: 'Accumulo di Polveri, riduzione della dissipazione termica\nPossibili reazioni esotermiche', sol: 'Pulizia periodica', note: '' },
+  { nc: 'Dispositivo NON Ex\nNon congruo alla Zona di Installazione, in quanto NON Ex', sol: 'Sostituzione (vedi nota)', note: 'Da sostituirsi quando danneggiato o non funzionante con dispositivo congruo alla Zona di Installazione 22' },
+  { nc: 'Motore\nNon congruo alla Zona di Installazione, in quanto NON Ex', sol: 'Sostituzione (vedi nota)\nPulizia periodica per ridurre Accumulo di Polveri, che riduce la dissipazione termica\nPossibili reazioni esotermiche', note: 'Da sostituirsi quando danneggiato o non funzionante con dispositivo congruo alla Zona di Installazione 22' },
+  { nc: 'Connettori Elettrici NON Ex', sol: 'Sostituzione / Adeguamento', note: 'Connettore triplo con spina comune\nPericolo di scintillio' },
+];
+
+function seedDefaultAnagrafiche() {
+  DEFAULT_NC_SEED.forEach(item => {
+    if (item.nc && !anagrafiche.nc.includes(item.nc)) anagrafiche.nc.push(item.nc);
+    if (item.sol && !anagrafiche.soluzioni.includes(item.sol)) anagrafiche.soluzioni.push(item.sol);
+    if (item.note && !anagrafiche.note.includes(item.note)) anagrafiche.note.push(item.note);
+  });
+}
+
 function loadAnagrafiche() {
+  let hadSaved = false;
   try {
     const raw = localStorage.getItem('anagrafiche-liste');
     if (raw) {
+      hadSaved = true;
       const data = JSON.parse(raw);
       const loaded = data.anagrafiche || data; // retrocompatibile con formato precedente
       anagrafiche = Object.assign({ reparti: [], macchine: [], codici: [], nc: [], soluzioni: [], note: [], lotoDescrizione: [], lotoSpegnimento: [], lotoIsolamento: [] }, loaded);
       machineRegistry = data.machineRegistry || [];
     }
   } catch (e) { /* nessuna lista salvata ancora, o localStorage non disponibile */ }
+  if (!hadSaved) {
+    seedDefaultAnagrafiche();
+    saveAnagrafiche();
+  }
   renderDatalists();
 }
 
