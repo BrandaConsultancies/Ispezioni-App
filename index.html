@@ -116,7 +116,7 @@
 <header>
   <h1>📋 Ispezione</h1>
   <div class="sub">Report di Ispezione</div>
-  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.23</div>
+  <div class="sub" style="opacity:.7; font-size:10px; margin-top:2px;">Versione: 2026-08-06.24</div>
   <div class="copyright">WebApp BrandaConsultancies 2026 — All rights reserved</div>
 </header>
 
@@ -1793,17 +1793,28 @@ function wrapHeight(text, charsPerLine, minH) {
   return Math.max(minH || 18, lines * 14 + 8);
 }
 
-function addImageToRow(ctx, mediaFiles, dataUrl, colIdx, rowNum) {
+function photoTargetHeightPt(width, height, targetWidthPx) {
+  targetWidthPx = targetWidthPx || 300;
+  const ratio = (width && height) ? (height / width) : 0.75;
+  return Math.round(targetWidthPx * ratio * 0.75); // px -> pt a 96dpi
+}
+
+function addImageToRow(ctx, mediaFiles, dataUrl, colIdx, rowNum, imgWidth, imgHeight, targetWidthPx) {
+  targetWidthPx = targetWidthPx || 300;
+  const ratio = (imgWidth && imgHeight) ? (imgHeight / imgWidth) : 0.75;
+  const targetHeightPx = Math.round(targetWidthPx * ratio);
+  const cx = targetWidthPx * 9525; // EMU per pixel a 96dpi
+  const cy = targetHeightPx * 9525;
   const imgName = 'image' + mediaFiles.length + '.jpeg';
   mediaFiles.push({ name: imgName, base64: dataUrl.split(',')[1] });
   const rId = 'rIdImg' + mediaFiles.length;
   ctx.anchors.push({
     rId,
-    xml: `<xdr:twoCellAnchor><xdr:from><xdr:col>${colIdx}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${rowNum - 1}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>` +
-      `<xdr:to><xdr:col>${colIdx + 1}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${rowNum}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>` +
+    xml: `<xdr:oneCellAnchor><xdr:from><xdr:col>${colIdx}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${rowNum - 1}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>` +
+      `<xdr:ext cx="${cx}" cy="${cy}"/>` +
       `<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${mediaFiles.length}" name="Foto ${mediaFiles.length}"/><xdr:cNvPicPr/></xdr:nvPicPr>` +
       `<xdr:blipFill><a:blip r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>` +
-      `<xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor>`,
+      `<xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`,
     target: 'media/' + imgName
   });
 }
@@ -1873,7 +1884,7 @@ async function exportExcel() {
   // --- Foglio NOTE GENERALI DI REPARTO ---
   {
     const ctx = newCtx();
-    addImageToRow(ctx, mediaFiles, LOGO_DATA_URL, 0, pushRow(ctx, [], 62));
+    addImageToRow(ctx, mediaFiles, LOGO_DATA_URL, 0, pushRow(ctx, [], 62), LOGO_W, LOGO_H, 80);
     pushRow(ctx, [{ col: 0, style: 8, text: 'BRANDA Fabio Emanuele' }]); mergeRange(ctx, `A${ctx.rowNum-1}:F${ctx.rowNum-1}`);
     pushRow(ctx, [{ col: 0, style: 9, text: 'Consulenze Industriali' }]); mergeRange(ctx, `A${ctx.rowNum-1}:F${ctx.rowNum-1}`);
     pushRow(ctx, [{ col: 0, style: 10, text: 'CMSE® Certified Machinery Safety Expert (TÜV Nord) – Cert. no. 44 506 26 094038 1463' }]); mergeRange(ctx, `A${ctx.rowNum-1}:F${ctx.rowNum-1}`);
@@ -1941,17 +1952,19 @@ async function exportExcel() {
         wrapHeight(p.soluzioneTecnica, 42, 0),
         wrapHeight(p.note, 42, 0)
       );
-      const rowH = Math.max(textH, 210);
+      const photoH = fotos[0] ? photoTargetHeightPt(fotos[0].width, fotos[0].height, 300) : 0;
+      const rowH = Math.max(textH, photoH, 210);
       const r = pushRow(ctx, [
         { col: 0, style: 3, text: String(idx + 1) },
         { col: 2, style: 7, text: p.ncRilevata || '' },
         { col: 3, style: 7, text: p.soluzioneTecnica || '' },
         { col: 4, style: 7, text: p.note || '' },
       ], rowH);
-      if (fotos[0]) addImageToRow(ctx, mediaFiles, fotos[0].src, 1, r);
+      if (fotos[0]) addImageToRow(ctx, mediaFiles, fotos[0].src, 1, r, fotos[0].width, fotos[0].height, 300);
       for (let i = 1; i < fotos.length; i++) {
-        const r2 = pushRow(ctx, [], 210);
-        addImageToRow(ctx, mediaFiles, fotos[i].src, 1, r2);
+        const hI = Math.max(photoTargetHeightPt(fotos[i].width, fotos[i].height, 300), 210);
+        const r2 = pushRow(ctx, [], hI);
+        addImageToRow(ctx, mediaFiles, fotos[i].src, 1, r2, fotos[i].width, fotos[i].height, 300);
       }
     });
 
